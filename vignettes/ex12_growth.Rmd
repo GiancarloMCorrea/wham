@@ -286,8 +286,6 @@ check_convergence(my_model_3)
 
 ## 4. Model comparison
 
-### 4.1. Compare mean length at age
-
 We can compare relevant estimated quantities between models:
 
 ```{r eval=FALSE}

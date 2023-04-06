@@ -133,7 +133,13 @@ wham_data$use_catch_paa = matrix(0, ncol = 1, nrow = n_years)
 wham_data$agg_indices = as.matrix(data_file$CPUE[,4])
 wham_data$index_cv = as.matrix(data_file$CPUE[,5])
 wham_data$units_indices = rep(0L, times = 1) # numbers
-wham_data$fracyr_indices = matrix(0.01, ncol = 1, nrow = n_years)
+wham_data$fracyr_indices = matrix(0, ncol = 1, nrow = n_years)
+# Length comps survey:
+index_pal_num = data_file$lencomp[data_file$lencomp$FltSvy == 2, 7:(7+length(wham_data$lengths)-1)]
+index_pal_prop = t(apply(as.matrix(index_pal_num),1, function(x) x/sum(x)))
+wham_data$index_pal = index_pal_prop
+wham_data$index_NeffL = as.matrix(as.double(data_file$lencomp[data_file$lencomp$FltSvy == 2, 6]))
+wham_data$use_index_pal = matrix(1, nrow = n_years, ncol = wham_data$n_indices)
 # index CAAL information (Neff):
 index_alk_Neff = array(0, dim = c(length(wham_data$years), wham_data$n_fleets, length(wham_data$lengths)))
 all_years_lengths = expand.grid(Lbin_lo = wham_data$lengths, Yr = wham_data$years)
@@ -161,8 +167,8 @@ wham_data$use_index_caal[which(wham_data$index_caal_Neff > 0)] = 1
 # Age comps indices:
 wham_data$use_index_paa = matrix(0, nrow = n_years, ncol = wham_data$n_indices)
 # Fishing mortality and selectivity:
-wham_data$selblock_pointer_indices = matrix(2L, ncol = 1, nrow = n_years)
 wham_data$selblock_pointer_fleets = matrix(1L, ncol = 1, nrow = n_years)
+wham_data$selblock_pointer_indices = matrix(2L, ncol = 1, nrow = n_years)
 wham_data$F = matrix(apply(X = SS_report$fatage[SS_report$fatage$Yr >= min_year & 
                                                   SS_report$fatage$Yr <= max_year,
                                                 9:ncol(SS_report$fatage)], MARGIN = 1, FUN = max),
@@ -185,7 +191,7 @@ my_input1 = prepare_wham_input(model_name="whamCAAL",
                                                re=rep("none",2), 
                                                initial_pars=list(selpars1,
                                                                  selpars2),
-                                               fix_pars = list(5:6, 2),
+                                               fix_pars = list(5:6, NULL),
                                                n_selblocks = 2),
                               M = list(model = 'constant', re = 'none', 
                                        initial_means = 0.36, 
@@ -220,38 +226,21 @@ Run model and check convergence:
 
 ```{r eval=FALSE}
 my_model_1 = fit_wham(my_input1, do.osa = FALSE, do.fit = FALSE, do.retro = FALSE)
-#check_convergence(my_model_1)
+check_convergence(my_model_1)
 ```
 
-Check NLL by component (see the nll for CAAL data, it is NaN):
+Make plots:
 
 ```{r eval=FALSE}
-my_model_1$rep[grep('nll',names(my_model_1$rep))] %>% lapply(sum) %>% unlist
+plot_wham_output(mod=my_model_1, out.type='html', dir.main=file.path(write.dir,'my_model'))
 ```
-
-Now see the NLL for year = 1 and index = 1, you will see the NLL for each length bin:
-
-```{r eval=FALSE}
-my_model_1$rep$nll_index_caal[1,1,]
-```
-
-As you can see, there are NaN for length bin 8, 9, 10, 11, and 12. Let's explore the predicted age compositions for those length bins and also for length bin 13, 14 and 15:
-
-```{r eval=FALSE}
-# Length bins with NaN:
-my_model_1$rep$pred_index_caal[1,1,8,]
-my_model_1$rep$pred_index_caal[1,1,9,]
-my_model_1$rep$pred_index_caal[1,1,10,]
-my_model_1$rep$pred_index_caal[1,1,11,]
-my_model_1$rep$pred_index_caal[1,1,12,]
-# Length bins (work ok):
-my_model_1$rep$pred_index_caal[1,1,13,]
-my_model_1$rep$pred_index_caal[1,1,14,]
-my_model_1$rep$pred_index_caal[1,1,15,]
-```
-
-I remember I spent a lot of time exploring the issue and found out that the problem arises when we have a predicted paa < 1e-16 for an age younger than the plus group. 
 
 ## 4. Model comparison
 
 SSB time series:
+
+![](https://raw.githubusercontent.com/GiancarloMCorrea/wham/growth/vignettes/ex13_plots/compare_SSB_Ex2.png){ width=80% }
+
+And selectivity curves for fishery (Fleet 1) and survey (Fleet 2):
+
+![](https://raw.githubusercontent.com/GiancarloMCorrea/wham/growth/vignettes/ex13_plots/compare_Sel_Ex2.png){ width=80% }

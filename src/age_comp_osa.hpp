@@ -55,6 +55,7 @@ Type dmultinom(vector<Type> x, vector<Type> p, data_indicator<vector<Type>, Type
         //cdf = pbinom(x(i),nUnused,p(i)/(Type(1)-pUsed));
         nUnused -= x(i);
         pUsed += p(i);
+		pUsed = squeeze(pUsed);
       }else{ // last index 
         logres += k(i)*Type(0);
         //cdf = Type(1);
