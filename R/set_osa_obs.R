@@ -103,7 +103,7 @@ set_osa_obs = function(input)
         obs_y = res[[1]]
         ind = res[[2]] #now the ages to use is specified for all likelihods by transform_paa_obs
         #multinom, D-M, mvtweedie
-        if(data$age_comp_model_indices[i] %in% c(1:2,10)) obs_y = obs_y * data$index_Neff[y,i]
+        if(data$age_comp_model_indices[i] %in% c(1:2,10,11)) obs_y = obs_y * data$index_Neff[y,i]
 
         if(length(ind)) {
           tmp = data.frame(year = y, fleet = indices[i], bin = (1:data$n_ages)[ind], type = 'indexpaa', val = obs_y[ind])
@@ -130,7 +130,7 @@ set_osa_obs = function(input)
         obs_y = res[[1]]
         ind = res[[2]]
         #multinom, D-M, mvtweedie
-        if(data$len_comp_model_indices[i] %in% c(1:2,10)) obs_y = obs_y * data$index_NeffL[y,i]
+        if(data$len_comp_model_indices[i] %in% c(1:2,10,11)) obs_y = obs_y * data$index_NeffL[y,i]
 
         if(length(ind)) {
           tmp = data.frame(year = y, fleet = indices[i], bin = (data$lengths)[ind], type = 'indexpal', val = obs_y[ind])
@@ -159,7 +159,7 @@ set_osa_obs = function(input)
         #res = transform_paa_obs(obs_y, data$age_comp_model_fleets[i])
         obs_y = res[[1]]
         ind = res[[2]] #now the ages to use is specified for all likelihods by transform_paa_obs
-        if(data$age_comp_model_fleets[i] %in% c(1:2,10)) obs_y = obs_y * data$catch_Neff[y,i]
+        if(data$age_comp_model_fleets[i] %in% c(1:2,10,11)) obs_y = obs_y * data$catch_Neff[y,i]
 
         if(length(ind)) {
           tmp = data.frame(year = y, fleet = fleets[i], bin = (1:data$n_ages)[ind], type = 'catchpaa', val = obs_y[ind])
@@ -183,7 +183,7 @@ set_osa_obs = function(input)
         res = transform_paa_obs(obs_y, data$len_comp_model_fleets[i])
         obs_y = res[[1]]
         ind = res[[2]] #now the ages to use is specified for all likelihods by transform_paa_obs
-        if(data$len_comp_model_fleets[i] %in% c(1:2,10)) obs_y = obs_y * data$catch_NeffL[y,i]
+        if(data$len_comp_model_fleets[i] %in% c(1:2,10,11)) obs_y = obs_y * data$catch_NeffL[y,i]
 
         if(length(ind)) {
           tmp = data.frame(year = y, fleet = fleets[i], bin = (data$lengths)[ind], type = 'catchpal', val = obs_y[ind])
@@ -211,7 +211,7 @@ set_osa_obs = function(input)
             #res = transform_paa_obs(obs_y, data$age_comp_model_indices[i])
             obs_y = res[[1]]
             ind = res[[2]] #now the ages to use is specified for all likelihods by transform_paa_obs
-            if(data$age_comp_model_indices[i] %in% c(1:2,10)) obs_y = obs_y * data$index_caal_Neff[y,i,l]
+            if(data$age_comp_model_indices[i] %in% c(1:2,10,11)) obs_y = obs_y * data$index_caal_Neff[y,i,l]
 
             if(length(ind)) {
               tmp = data.frame(year = y, fleet = indices[i], bin = paste0((1:data$n_ages)[ind], '_', data$lengths[l]), 
@@ -243,7 +243,7 @@ set_osa_obs = function(input)
             #res = transform_paa_obs(obs_y, data$age_comp_model_fleets[i])
             obs_y = res[[1]]
             ind = res[[2]] #now the ages to use is specified for all likelihods by transform_paa_obs
-            if(data$age_comp_model_fleets[i] %in% c(1:2,10)) obs_y = obs_y * data$catch_caal_Neff[y,i,l]
+            if(data$age_comp_model_fleets[i] %in% c(1:2,10,11)) obs_y = obs_y * data$catch_caal_Neff[y,i,l]
 
             if(length(ind)) {
               tmp = data.frame(year = y, fleet = fleet[i], bin = paste0((1:data$n_ages)[ind], '_', data$lengths[l]), 
@@ -502,7 +502,7 @@ transform_paa_obs = function(x, model, zero.criteria = 1e-15, do_mult = FALSE, a
     #transform logistic-normal obs to MVN obs (analogous to log-catch and log-indices)
     all_models <- c("multinomial","dir-mult","dirichlet-miss0","dirichlet-pool0",
     "logistic-normal-miss0", "logistic-normal-ar1-miss0", "logistic-normal-pool0",
-    "logistic-normal-01-infl","logistic-normal-01-infl-2par", "mvtweedie")
+    "logistic-normal-01-infl","logistic-normal-01-infl-2par", "mvtweedie", "dir-mult-linear")
   # if model %in% 1:2 do nothing for multinomial and D-m
   is_pred_pos = !(1:length(x) %in% ages_omit)
   x[which(!is_pred_pos)] = 0 #if obs in omitted ages are zero this does nothing
@@ -548,7 +548,7 @@ transform_paa_obs = function(x, model, zero.criteria = 1e-15, do_mult = FALSE, a
     } else { #only 1 positive category
       x[] = NA
     }
-  } else { #multinom, D-M, mvtweedie
+  } else { #multinom, D-M, mvtweedie, or DM-linear
     x[which(!is_pred_pos)] = NA
     pos_ind = which(is_pred_pos)
   }

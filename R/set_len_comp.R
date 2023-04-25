@@ -4,7 +4,8 @@ set_len_comp = function(input, len_comp)
 	par = input$par
   map = input$map
   all_models <- c( "multinomial",
-                   "dir-mult"
+                   "dir-mult",
+                   "dir-mult-linear"
                    # "dirichlet-miss0",
                    # "dirichlet-pool0",
                    # "logistic-normal-miss0",
@@ -14,7 +15,7 @@ set_len_comp = function(input, len_comp)
                    # "logistic-normal-01-infl-2par",
                    # "mvtweedie" 
                    )
-  n_pars <- c(0,1)
+  n_pars <- c(0,1,1)
   if(is.null(len_comp)){
     data$len_comp_model_fleets = rep(1, data$n_fleets) # multinomial by default
     data$len_comp_model_indices = rep(1, data$n_indices) # multinomial by default
@@ -53,11 +54,11 @@ set_len_comp = function(input, len_comp)
 
   map$index_pal_pars = matrix(NA,data$n_indices, 3)
   for(i in 1:data$n_indices) if(sum(data$use_index_pal[,i])){
-    if(data$len_comp_model_indices[i] %in% c(2))  map$index_pal_pars[i,1] = 1
+    if(data$len_comp_model_indices[i] %in% c(2,3))  map$index_pal_pars[i,1] = 1
   }
   map$catch_pal_pars = matrix(NA,data$n_fleets, 3)
   for(i in 1:data$n_fleets) if(sum(data$use_catch_pal[,i])){
-    if(data$len_comp_model_fleets[i] %in% c(2))  map$catch_pal_pars[i,1] = 1
+    if(data$len_comp_model_fleets[i] %in% c(2,3))  map$catch_pal_pars[i,1] = 1
   }
   nest = sum(map$index_pal_pars,na.rm=TRUE)
   if(nest) map$index_pal_pars[which(!is.na(map$index_pal_pars))] = 1:nest

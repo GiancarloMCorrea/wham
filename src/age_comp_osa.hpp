@@ -450,7 +450,7 @@ Type get_acomp_ll(vector<Type> tf_paa_obs, vector<Type> paa_pred, Type Neff, vec
       ll = dmultinom(tf_paa_obs, p, keep, 1, 1);
     }
     if(age_comp_model == 2) {
-      //dirichlet-multinomial
+      //saturating dirichlet-multinomial
       //tf_paa_obs = Neff * paa_obs
       vector<Type> alphas = p * exp(age_comp_pars(0));
       ll = ddirmultinom(tf_paa_obs, alphas, keep, 1, 1);
@@ -508,6 +508,13 @@ Type get_acomp_ll(vector<Type> tf_paa_obs, vector<Type> paa_pred, Type Neff, vec
       //vector<Type> temp_n = Neff * paa_obs;
       ll = dmvtweedie(tf_paa_obs, p, exp(age_comp_pars(0)), Type(1.0)+invlogit(age_comp_pars(1)), keep, 1);
     }
+	if(age_comp_model == 11) {
+		//dirichlet-multinomial -- LINEAR
+		// see https://doi.org/10.1016/j.fishres.2016.06.005
+		vector<Type> alphas = sum(tf_paa_obs) * p * exp(age_comp_pars(0));
+		//vector<Type> alphas = p * exp(age_comp_pars(0));
+		ll = ddirmultinom(tf_paa_obs, alphas, keep, 1, 1);
+	}
 
   return ll;
 }
@@ -530,6 +537,13 @@ Type get_lcomp_ll(vector<Type> tf_pal_obs, vector<Type> pal_pred, Type NeffL, in
       vector<Type> alphas = p * exp(len_comp_pars(0));
       ll = ddirmultinom(tf_pal_obs, alphas, keep, 1, 1);
     }
+	if(len_comp_model == 3) {
+		//dirichlet-multinomial -- LINEAR
+		// see https://doi.org/10.1016/j.fishres.2016.06.005
+		vector<Type> alphas = sum(tf_pal_obs) * p * exp(len_comp_pars(0));
+		//vector<Type> alphas = p * exp(age_comp_pars(0));
+		ll = ddirmultinom(tf_pal_obs, alphas, keep, 1, 1);
+	}
 
   return ll;
 }
