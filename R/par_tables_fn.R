@@ -483,7 +483,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
   # }
 
   # Somatic growth
-    if(data$growth_model < 3){
+    if(data$is_parametric == 1){
 
       Gpar_vector = as.vector(pars$growth_a)
       if(data$growth_model == 1) Gpar_names = c('K', 'Linf', 'L1')
@@ -523,12 +523,14 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
 
     }
 
-    if(data$growth_model == 3){
-      Gpar_vector = as.vector(pars$growth_a)
-      fe.names = c(fe.names, paste0("Mean length for age ", mod$ages.lab))
-      fe.vals = c(fe.vals, exp(pars$LAA_a))
-      for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$LAA_a[a], sd$LAA_a[a], type = "exp"))
-
+    if(data$is_nonparametric == 1){
+      if(is_parametric == 0) {
+        Gpar_vector = as.vector(pars$growth_a)
+        fe.names = c(fe.names, paste0("Mean length for age ", mod$ages.lab))
+        fe.vals = c(fe.vals, exp(pars$LAA_a))
+        for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$LAA_a[a], sd$LAA_a[a], type = "exp"))
+      }
+    
       if(data$LAA_re_model > 1) {
         fe.names = c(fe.names, "LAA RE $\\sigma$")
         fe.vals = c(fe.vals, exp(pars$LAA_repars[1]))
@@ -546,10 +548,12 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       }
 
       # SD information:
-      SD_vector = as.vector(pars$SDLAA_par)
-      fe.names = c(fe.names, c('SD1', 'SDA'))
-      fe.vals = c(fe.vals, exp(SD_vector))
-      for(j in 1:2) fe.cis = rbind(fe.cis, ci(SD_vector[j], as.vector(sd$SDLAA_par)[j], type = "exp"))
+      if(is_parametric == 0) {
+        SD_vector = as.vector(pars$SDLAA_par)
+        fe.names = c(fe.names, c('SD1', 'SDA'))
+        fe.vals = c(fe.vals, exp(SD_vector))
+        for(j in 1:2) fe.cis = rbind(fe.cis, ci(SD_vector[j], as.vector(sd$SDLAA_par)[j], type = "exp"))
+      }
     }
 
   # LW parameters

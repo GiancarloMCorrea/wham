@@ -8,19 +8,19 @@ set_growth = function(input, growth)
 
   # growth default options:
   n_par_def = 3 # 5 parameters (default): K, Linf, L1
-  data$growth_model = 1 # 1: vB-classic, 2: Richards, 3: use LAA as input (see set_LAA)
+  data$growth_model = 1 # 0: nonparametric, parametric: 1: vB-classic, 2: Richards
   data$growth_re_model = rep(1, times = n_par_def) # default = no RE / 'none'
-  data$growth_est <- rep(0, times = n_par_def) # default = don't estimate M
-  data$n_growth_par = n_par_def # 5 parameters to estimate: K, Linf, t0, CV1, CVA, in that order
+  data$growth_est <- rep(0, times = n_par_def) # default = don't estimate growth parameters
+  data$n_growth_par = 3 # number of parameters.
   data$SD_est = c(0,0)
+  data$is_parametric = 1L # default
   growth_re_ini = array(0, dim = c(data$n_years_model, data$n_ages, n_par_def))
-  growth_ini = c(log(0.2), log(60), log(8))
-  SD_ini = c(log(3), log(7)) # CV1 and CVA
+  growth_ini = c(log(0.2), log(60), log(8)) # K, Linf, and L1
+  SD_ini = c(log(3), log(7)) # SD1 and SDA
+  n_par = c(3, 4) # number of parameters for each method (vB: 3, and Richards: 4)
 
   # prepare growth options:
   if(!is.null(growth)){
-
-    n_par = c(3, 4) # number of parameters for each method
 
     if(!is.null(growth$model)){ # growth model to be used
       if(!(growth$model %in% c("vB_classic", "Richards"))) stop("growth$model must be 'vB_classic' or 'Richards'")
@@ -59,7 +59,8 @@ set_growth = function(input, growth)
         data$SD_est[growth$SD_est] = 1
     }
 
-  }
+  } 
+  
   data$n_growth_est <- sum(data$growth_est)
 
   # growth pars --------------------------

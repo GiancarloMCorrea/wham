@@ -524,13 +524,10 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 	input = set_selectivity(input, selectivity)
 	#print("selectivity")
 
-	# Stop if parametric and nonparamtric set up
-	if(!is.null(growth) & !is.null(LAA)) stop("Choose either parametric or nonparametric approach for growth")
-
-	# Growth
+	# Growth (parametric approach)
 	input = set_growth(input, growth)
 
-	# LAA non parametric
+	# LAA non parametric (always after the set_growth function)
 	input = set_LAA(input, LAA, growth)
 
 	# LW

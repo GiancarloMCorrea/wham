@@ -101,7 +101,9 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(WAA_est); 
   DATA_INTEGER(WAA_re_model); 
   DATA_INTEGER(n_growth_par); 
-  DATA_INTEGER(growth_model); // 1: "vB-classic", 2: "Richards", 3: "nonparametric LAA" 
+  DATA_INTEGER(growth_model); // 1: "vB-classic", 2: "Richards"
+  DATA_INTEGER(is_parametric); // growth model is parametric? 1 = yes, 0 = no
+  DATA_INTEGER(is_nonparametric); // growth model is nonparametric? 1 = yes, 0 = no 
   DATA_IVECTOR(growth_re_model); // 1 = none, 2 = IID_y, 3 = iid_c, 4 = ar1_y, 5 = ar1_c 
   DATA_SCALAR(age_L1); // age for L1
   DATA_INTEGER(age_L1_ceil); // age (ceiling) for L1
@@ -858,7 +860,7 @@ Type objective_function<Type>::operator() ()
    }
 
   // add to growth parameters in projection years
-  if(do_proj == 1){ 
+  if((do_proj == 1) & (is_parametric == 1)){  // parametric and semiparametric
   	for(int j = 0; j < n_growth_par; j++) { 
 	  if(proj_growth_opt(j) == 2){
 		  matrix<Type> GW_toavg(n_toavg,n_ages);
@@ -892,8 +894,8 @@ Type objective_function<Type>::operator() ()
   }
 
 
-  // add to LAA parameters in projection years
-  if((do_proj == 1) & (growth_model == 3)){ // LAA nonparametric
+  // add to LAA parameters in projection years 
+  if((do_proj == 1) & (is_nonparametric == 1) & (is_parametric == 0)){ // nonparametric approach
 	if(proj_LAA_opt(0) == 2){
 	  matrix<Type> GW_toavg(n_toavg,n_ages);
 	  for(int a = 0; a < n_ages; a++){
@@ -943,8 +945,8 @@ Type objective_function<Type>::operator() ()
   // Update SDgrowth_par:
   vector<Type> SD_len(2); // always 2 parameters
   for(int i=0; i < 2; i++) {
-	  if(growth_model < 3) SD_len(i) = exp(SDgrowth_par(i)); 
-	  if(growth_model == 3) SD_len(i) = exp(SDLAA_par(i)); // nonparametric approach
+	  if(is_parametric == 1) SD_len(i) = exp(SDgrowth_par(i)); // parametric and semiparametric
+	  if((is_nonparametric == 1) & (is_parametric == 0)) SD_len(i) = exp(SDLAA_par(i)); // nonparametric approach
   }
   REPORT(SD_len);
 
@@ -1041,7 +1043,7 @@ Type objective_function<Type>::operator() ()
     }
   
   // --------------------------------------------------------------------------
-  // Calculate mean-LAA, SDAA, and transition matrix, for all years: 
+  // Calculate mean-LAA, SDAA, and transition matrix, for all years (January 1st): 
   Type Lminp = min(lengths);
   Type Lmaxp = max(lengths);
   Type len_bin = lengths(1) - lengths(0); 
@@ -1063,87 +1065,103 @@ Type objective_function<Type>::operator() ()
   for(int y = 0; y < n_years_model + n_years_proj; y++)
   {
 	  for(int a = 0; a < n_ages; a++) {
+		  
+			// calculate mean length-at-age:
+		    if(is_parametric == 1) {
 
-			if(growth_model == 1) { // vB classic growth model
-				b_len = (GW_par(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
-				if(y == 0) { //year = 0
-					if((a + 1.0) <= age_L1) { // linear growth
-						LAA(y,a) = Lminp + b_len*(a+1.0);
-					} else { // use growth equation
-						LAA(y,a) = GW_par(y,a,1) + (GW_par(y,a,2) - GW_par(y,a,1)) * exp(-GW_par(y,a,0)*(a+1.0-age_L1)); 
-					}
-				} else { // year > 0
-					if((a + 1.0) < age_L1) { // linear growth
-						LAA(y,a) = Lminp + b_len*(a+1.0); 
-					} else { // use growth equation
-						if((a+1) == age_L1_ceil) { // linear growth + growth equation
-							last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
-							LAA(y,a) = last_linear + (last_linear - GW_par(y,a,1))*(exp(-GW_par(y,a,0)*(a+1.0-age_L1)) - 1.0); // use growth parameters y
-						} else { // only growth curve
-							LAA(y,a) = LAA(y-1,a-1) + (LAA(y-1,a-1) - GW_par(y-1,a-1,1))*(exp(-GW_par(y-1,a-1,0)) - 1.0);// use growth parameters y-1 and a-1 because it is jan1
+				if(growth_model == 1) { // parametric: vB classic growth model
+					b_len = (GW_par(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
+					if(y == 0) { //year = 0
+						if((a + 1.0) <= age_L1) { // linear growth
+							LAA(y,a) = Lminp + b_len*(a+1.0);
+						} else { // use growth equation
+							LAA(y,a) = GW_par(y,a,1) + (GW_par(y,a,2) - GW_par(y,a,1)) * exp(-GW_par(y,a,0)*(a+1.0-age_L1)); 
+						}
+					} else { // year > 0
+						if((a + 1.0) < age_L1) { // linear growth
+							LAA(y,a) = Lminp + b_len*(a+1.0); 
+						} else { // use growth equation
+							if((a+1) == age_L1_ceil) { // linear growth + growth equation
+								last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
+								LAA(y,a) = last_linear + (last_linear - GW_par(y,a,1))*(exp(-GW_par(y,a,0)*(a+1.0-age_L1)) - 1.0); // use growth parameters y
+							} else { // only growth curve
+								LAA(y,a) = LAA(y-1,a-1) + (LAA(y-1,a-1) - GW_par(y-1,a-1,1))*(exp(-GW_par(y-1,a-1,0)) - 1.0);// use growth parameters y-1 and a-1 because it is jan1
+							}
 						}
 					}
-				}
-				// correction for oldest age (as in SS)
-				if(a == (n_ages-1)) {
-					current_size = LAA(y,a);
-					temp = 0;
-					temp1 = 0;
-					temp3 = GW_par(y,a,1) - current_size;
-					temp4 = 1;
-					for(int a = 0; a <= n_ages; a++) {
-						div_age = (a+0.0)/(n_ages+0.0);
-						temp += temp4*(current_size + div_age*temp3);
-						temp1 += temp4;
-						temp4 *= temp2;
+					// correction for oldest age (as in SS)
+					if(a == (n_ages-1)) {
+						current_size = LAA(y,a);
+						temp = 0;
+						temp1 = 0;
+						temp3 = GW_par(y,a,1) - current_size;
+						temp4 = 1;
+						for(int a = 0; a <= n_ages; a++) {
+							div_age = (a+0.0)/(n_ages+0.0);
+							temp += temp4*(current_size + div_age*temp3);
+							temp1 += temp4;
+							temp4 *= temp2;
+						}
+						LAA(y,a) = temp/temp1; // oldest age
 					}
-					LAA(y,a) = temp/temp1; // oldest age
+				}			
+				
+				if(growth_model == 2) { // parametric: Richards growth model
+					b_len = (GW_par(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
+					if(y == 0) { //year = 0
+						if((a + 1.0) <= age_L1) { // linear growth
+							LAA(y,a) = Lminp + b_len*(a+1.0);
+						} else { // use growth equation
+							LAA(y,a) = pow(pow(GW_par(y,a,1),GW_par(y,a,3)) + (pow(GW_par(y,a,2),GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3))) * exp(-GW_par(y,a,0)*(a+1.0-age_L1)),1/GW_par(y,a,3)); 
+						}
+					} else { // year > 0
+						if((a + 1.0) < age_L1) { // linear growth
+							LAA(y,a) = Lminp + b_len*(a+1.0); 
+						} else { // use growth equation
+							if((a+1) == age_L1_ceil) { // linear growth + growth equation
+								last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
+								LAA(y,a) = pow(pow(last_linear,GW_par(y,a,3)) + (pow(last_linear,GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3)))*(exp(-GW_par(y,a,0)*(a+1.0-age_L1)) - 1.0),1/GW_par(y,a,3)); // use growth parameters y 
+							} else { // only growth curve
+								LAA(y,a) = pow(pow(LAA(y-1,a-1),GW_par(y-1,a-1,3)) + (pow(LAA(y-1,a-1),GW_par(y-1,a-1,3)) - pow(GW_par(y-1,a-1,1),GW_par(y-1,a-1,3)))*(exp(-GW_par(y-1,a-1,0)) - 1.0),1/GW_par(y-1,a-1,3));
+							}
+						}
+					}
+					// correction for oldest age (as in SS)
+					if(a == (n_ages-1)) {
+						current_size = LAA(y,a);
+						temp = 0;
+						temp1 = 0;
+						temp3 = GW_par(y,a,1) - current_size;
+						temp4 = 1;
+						for(int a = 0; a <= n_ages; a++) {
+							div_age = (a+0.0)/(n_ages+0.0);
+							temp += temp4*(current_size + div_age*temp3);
+							temp1 += temp4;
+							temp4 *= temp2;
+						}
+						LAA(y,a) = temp/temp1; // oldest age
+					}
 				}
-			}			
+
+		    }				
+
+			if((is_nonparametric == 1) & (is_parametric == 0)) LAA(y,a) = LAA_par(y,a); // nonparametric approach
 			
-			if(growth_model == 2) { // Richards growth model
-				b_len = (GW_par(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
-				if(y == 0) { //year = 0
-					if((a + 1.0) <= age_L1) { // linear growth
-						LAA(y,a) = Lminp + b_len*(a+1.0);
-					} else { // use growth equation
-						LAA(y,a) = pow(pow(GW_par(y,a,1),GW_par(y,a,3)) + (pow(GW_par(y,a,2),GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3))) * exp(-GW_par(y,a,0)*(a+1.0-age_L1)),1/GW_par(y,a,3)); 
-					}
-				} else { // year > 0
-					if((a + 1.0) < age_L1) { // linear growth
-						LAA(y,a) = Lminp + b_len*(a+1.0); 
-					} else { // use growth equation
-						if((a+1) == age_L1_ceil) { // linear growth + growth equation
-							last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
-							LAA(y,a) = pow(pow(last_linear,GW_par(y,a,3)) + (pow(last_linear,GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3)))*(exp(-GW_par(y,a,0)*(a+1.0-age_L1)) - 1.0),1/GW_par(y,a,3)); // use growth parameters y 
-						} else { // only growth curve
-							LAA(y,a) = pow(pow(LAA(y-1,a-1),GW_par(y-1,a-1,3)) + (pow(LAA(y-1,a-1),GW_par(y-1,a-1,3)) - pow(GW_par(y-1,a-1,1),GW_par(y-1,a-1,3)))*(exp(-GW_par(y-1,a-1,0)) - 1.0),1/GW_par(y-1,a-1,3));
-						}
-					}
-				}
-				// correction for oldest age (as in SS)
-				if(a == (n_ages-1)) {
-					current_size = LAA(y,a);
-					temp = 0;
-					temp1 = 0;
-					temp3 = GW_par(y,a,1) - current_size;
-					temp4 = 1;
-					for(int a = 0; a <= n_ages; a++) {
-						div_age = (a+0.0)/(n_ages+0.0);
-						temp += temp4*(current_size + div_age*temp3);
-						temp1 += temp4;
-						temp4 *= temp2;
-					}
-					LAA(y,a) = temp/temp1; // oldest age
-				}
-			}			
-
-			if(growth_model == 3) LAA(y,a) = LAA_par(y,a); // LAA model
 	  } // loop age
+  } // loop year 
+	  
+// do semiparametric approach here:	
+  if((is_nonparametric == 1) & (is_parametric == 1)) { // semiparametric approach
+	  for(int y = 0; y < n_years_model + n_years_proj; y++) for(int a = 0; a < n_ages; a++) LAA(y,a) = exp(log(LAA(y,a)) + LAA_re(y,a));
+  }
+
+// calculate SD and transition matrix:
+  for(int y = 0; y < n_years_model + n_years_proj; y++)
+  {	  
 	  
 	  for(int a = 0; a < n_ages; a++) {
 			// SD calculation: 
-			if(growth_model < 3) { // for parametric approach
+			if(is_parametric == 1) { // for parametric and semiparametric approach
 				if((a + 1.0) < age_L1) { // same as SD1
 					SDAA(y,a) = SD_len(0); 
 				} else { 
@@ -1155,11 +1173,12 @@ Type objective_function<Type>::operator() ()
 					}
 				}				
 			}
-			if(growth_model == 3) { // only works for year effect
+			if((is_nonparametric == 1) & (is_parametric == 0)) { // only for nonparametric approach
 				Slope = (SD_len(1) - SD_len(0))/(LAA(y,n_ages-1)-LAA(y,0));
 				SDAA(y,a) = SD_len(0) + Slope*(LAA(y,a)-LAA(y,0));  
 			}
 			
+			// construct age-length transition matrix:
 			for(int l = 0; l < n_lengths; l++) {
 				
 				if(l == 0) { 
@@ -1194,16 +1213,16 @@ Type objective_function<Type>::operator() ()
   // January 1st:
   phi_matrix(waa_pointer_jan1-1) = phi_mat; // calculated in previous section
   // SSB:
-  phi_matrix(waa_pointer_ssb-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_SSB, growth_model, age_L1);
+  phi_matrix(waa_pointer_ssb-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_SSB, is_parametric, is_nonparametric, growth_model, age_L1);
   // Total catch:
-  phi_matrix(waa_pointer_totcatch-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_catch, growth_model, age_L1);
+  phi_matrix(waa_pointer_totcatch-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_catch, is_parametric, is_nonparametric, growth_model, age_L1);
   // For fleets:
   for(int f = 0; f < n_fleets; f++) {
 	 phi_matrix(waa_pointer_fleets(f)-1) = phi_matrix(waa_pointer_totcatch-1); // use same as total catch, fraction = 0.5
   }
   // For indices:
   for(int i = 0; i < n_indices; i++) {
-	 phi_matrix(waa_pointer_indices(i)-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, vector<Type>(fracyr_indices.col(i)), growth_model, age_L1);
+	 phi_matrix(waa_pointer_indices(i)-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, vector<Type>(fracyr_indices.col(i)), is_parametric, is_nonparametric, growth_model, age_L1);
   }
   
   // --------------------------------------------------------------------------

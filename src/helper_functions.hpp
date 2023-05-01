@@ -1185,9 +1185,11 @@ matrix<Type> sim_pop(array<Type> NAA_devs, int recruit_model, vector<Type> mean_
   return(out);
 }
 
+// calculate mean length-at-age at any fraction of year
 template <class Type>
-array<Type> pred_LAA(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vector<Type> expSD,
-					  array<Type> GW_par, vector<Type> lengths, vector<Type> fracyr_vec, int growth_model, Type age_L1){
+array<Type> pred_LAA(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vector<Type> SD_len,
+					  array<Type> GW_par, vector<Type> lengths, vector<Type> fracyr_vec, 
+					  int is_parametric, int is_nonparametric, int growth_model, Type age_L1){
 
   Type Lminp = min(lengths);
   Type Lmaxp = max(lengths);
@@ -1215,35 +1217,39 @@ array<Type> pred_LAA(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vecto
 		  Type fracyr = fracyr_vec(yuse);
 		  for(int a = 0; a < n_ages; a++)
 		  {  
-			if(growth_model == 1) { // classic von Bertalanffy curve
-				b_len = (GW_par(y,a,2) - Lminp)/age_L1;
-				if((a + 1.0 + fracyr) <= age_L1) { // use linear growth
-					mLAA(a) = Lminp + b_len*(a+1.0+fracyr);  
-				} else { // other options
-					if((a+1.0) >= age_L1) { // only growth curve
-						if(a == (n_ages-1)) mLAA(a) = mLAA_jan1(y,a); // no growth for age plus group
-						else mLAA(a) = mLAA_jan1(y,a) + (mLAA_jan1(y,a) - GW_par(y,a,1))*(exp(-GW_par(y,a,0)*fracyr) - 1.0);
-					} else { // linear + growth curve mixed
-						last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
-						mLAA(a) = last_linear + (last_linear - GW_par(y,a,1))*(exp(-GW_par(y,a,0)*(a+1.0+fracyr-age_L1)) - 1.0); 
+			// mean length-at-age calculation
+			if((is_parametric == 1)  & (is_nonparametric == 0)) { // only for parametric approach
+				if(growth_model == 1) { // classic von Bertalanffy curve
+					b_len = (GW_par(y,a,2) - Lminp)/age_L1;
+					if((a + 1.0 + fracyr) <= age_L1) { // use linear growth
+						mLAA(a) = Lminp + b_len*(a+1.0+fracyr);  
+					} else { // other options
+						if((a+1.0) >= age_L1) { // only growth curve
+							if(a == (n_ages-1)) mLAA(a) = mLAA_jan1(y,a); // no growth for age plus group
+							else mLAA(a) = mLAA_jan1(y,a) + (mLAA_jan1(y,a) - GW_par(y,a,1))*(exp(-GW_par(y,a,0)*fracyr) - 1.0);
+						} else { // linear + growth curve mixed
+							last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
+							mLAA(a) = last_linear + (last_linear - GW_par(y,a,1))*(exp(-GW_par(y,a,0)*(a+1.0+fracyr-age_L1)) - 1.0); 
+						}
+					}
+				}
+				if(growth_model == 2) { // Richards growth curve	
+					b_len = (GW_par(y,a,2) - Lminp)/age_L1;			
+					if((a + 1.0 + fracyr) <= age_L1) { // use linear growth
+						mLAA(a) = Lminp + b_len*(a+1.0+fracyr);  
+					} else { // other options
+						if((a+1.0) >= age_L1) { // only growth curve
+							if(a == (n_ages-1)) mLAA(a) = mLAA_jan1(y,a); // no growth for age plus group
+							else mLAA(a) = pow(pow(mLAA_jan1(y,a),GW_par(y,a,3)) + (pow(mLAA_jan1(y,a),GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3)))*(exp(-GW_par(y,a,0)*fracyr) - 1.0),1/GW_par(y,a,3));
+						} else { // linear + growth curve mixed
+							last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
+							mLAA(a) = pow(pow(last_linear,GW_par(y,a,3)) + (pow(last_linear,GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3)))*(exp(-GW_par(y,a,0)*(a+1.0+fracyr-age_L1)) - 1.0),1/GW_par(y,a,3));
+						}
 					}
 				}
 			}
-			if(growth_model == 2) { // Richards growth curve	
-				b_len = (GW_par(y,a,2) - Lminp)/age_L1;			
-				if((a + 1.0 + fracyr) <= age_L1) { // use linear growth
-					mLAA(a) = Lminp + b_len*(a+1.0+fracyr);  
-				} else { // other options
-					if((a+1.0) >= age_L1) { // only growth curve
-						if(a == (n_ages-1)) mLAA(a) = mLAA_jan1(y,a); // no growth for age plus group
-						else mLAA(a) = pow(pow(mLAA_jan1(y,a),GW_par(y,a,3)) + (pow(mLAA_jan1(y,a),GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3)))*(exp(-GW_par(y,a,0)*fracyr) - 1.0),1/GW_par(y,a,3));
-					} else { // linear + growth curve mixed
-						last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
-						mLAA(a) = pow(pow(last_linear,GW_par(y,a,3)) + (pow(last_linear,GW_par(y,a,3)) - pow(GW_par(y,a,1),GW_par(y,a,3)))*(exp(-GW_par(y,a,0)*(a+1.0+fracyr-age_L1)) - 1.0),1/GW_par(y,a,3));
-					}
-				}
-			}
-			if(growth_model == 3){ // nonparametric approach
+			
+			if(is_nonparametric == 1) { // nonparametric and semiparametric approach
 				if(a < (n_ages-1)) { // for a < n_ages - 1, linear interpolation
 					Grate = (mLAA_jan1(y_1,a+1) - mLAA_jan1(y,a))*fracyr;
 					mLAA(a) = mLAA_jan1(y,a) + Grate;	
@@ -1253,23 +1259,24 @@ array<Type> pred_LAA(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vecto
 			}
 			
 			// SD calculation (again): 
-			if(growth_model < 3) { // for parametric approach
+			if(is_parametric == 1) { // for parametric and semiparametric approach
 				if((a + 1.0 + fracyr) <= age_L1) { // same as SD1
-					this_SD = expSD(0); 
+					this_SD = SD_len(0); 
 				} else { 
 					if(a == (n_ages-1)) { // same as SDA
-						this_SD = expSD(1);
+						this_SD = SD_len(1);
 					} else { // linear interpolation
-						Slope = (expSD(1) - expSD(0))/(GW_par(y,a,1)-GW_par(y,a,2));
-						this_SD = expSD(0) + Slope*(mLAA(a)-GW_par(y,a,2));  
+						Slope = (SD_len(1) - SD_len(0))/(GW_par(y,a,1)-GW_par(y,a,2));
+						this_SD = SD_len(0) + Slope*(mLAA(a)-GW_par(y,a,2));  
 					}
 				}				
 			}
-			if(growth_model == 3) { // only works for year effect
-				Slope = (expSD(1) - expSD(0))/(mLAA_jan1(y,n_ages-1)-mLAA_jan1(y,0));
-				this_SD = expSD(0) + Slope*(mLAA(a)-mLAA_jan1(y,0));  
+			if((is_nonparametric == 1) & (is_parametric == 0)) { // only for nonparametric approach
+				Slope = (SD_len(1) - SD_len(0))/(mLAA_jan1(y,n_ages-1)-mLAA_jan1(y,0));
+				this_SD = SD_len(0) + Slope*(mLAA(a)-mLAA_jan1(y,0));  
 			}
 
+			// construct age-length transition matrix:
 			for(int l = 0; l < n_lengths; l++) {
 				
 				if(l == 0) { 
