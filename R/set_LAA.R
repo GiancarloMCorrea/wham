@@ -16,14 +16,14 @@ set_LAA = function(input, LAA, growth)
   data$LAA_re_model = 1 # none default
   data$LAA_est = rep(0, data$n_ages)
   data$SDLAA_est = c(0,0)
-  data$is_nonparametric = 0L # default: it is not nonparametric
+  data$isG_nonparametric = 0L # default: it is not nonparametric
   LAA_ini = log( 60 + (8 - 60)*exp(-0.2*(1:data$n_ages - 1)) )
   SD_ini_LAA = c(log(3), log(7)) # CV1 and CVA
 
   if(!is.null(LAA)) {
 
-    data$is_nonparametric = 1L # it is nonparametric
-    if(is.null(growth)) data$is_parametric = 0L 
+    data$isG_nonparametric = 1L # it is nonparametric
+    if(is.null(growth)) data$isG_parametric = 0L 
 
     if(!is.null(LAA$LAA_vals)) LAA_ini = log(LAA$LAA_vals)
     if(!is.null(LAA$est_pars)) data$LAA_est[LAA$est_pars] = 1

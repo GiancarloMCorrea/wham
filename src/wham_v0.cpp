@@ -40,7 +40,6 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(waa_pointer_indices);
   DATA_INTEGER(waa_pointer_ssb);
   DATA_INTEGER(waa_pointer_jan1);
-  DATA_INTEGER(weight_model); // 1 = use EWAA, 2 = use L-W relationship, 3 = use nonparametric WAA
   DATA_IMATRIX(use_catch_waa);
   DATA_IMATRIX(use_index_waa);
   DATA_ARRAY(waa);
@@ -99,11 +98,14 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(LAA_est); 
   DATA_INTEGER(LAA_re_model); 
   DATA_IVECTOR(WAA_est); 
-  DATA_INTEGER(WAA_re_model); 
+  DATA_INTEGER(WAA_re_model);
+  DATA_INTEGER(isW_ewaa); // WAA model : use EWAA 1 = yes, 0 = no
+  DATA_INTEGER(isW_parametric); // WAA model is parametric? 1 = yes, 0 = no
+  DATA_INTEGER(isW_nonparametric); // WAA model is nonparametric? 1 = yes, 0 = no   
   DATA_INTEGER(n_growth_par); 
   DATA_INTEGER(growth_model); // 1: "vB-classic", 2: "Richards"
-  DATA_INTEGER(is_parametric); // growth model is parametric? 1 = yes, 0 = no
-  DATA_INTEGER(is_nonparametric); // growth model is nonparametric? 1 = yes, 0 = no 
+  DATA_INTEGER(isG_parametric); // growth model is parametric? 1 = yes, 0 = no
+  DATA_INTEGER(isG_nonparametric); // growth model is nonparametric? 1 = yes, 0 = no 
   DATA_IVECTOR(growth_re_model); // 1 = none, 2 = IID_y, 3 = iid_c, 4 = ar1_y, 5 = ar1_c 
   DATA_SCALAR(age_L1); // age for L1
   DATA_INTEGER(age_L1_ceil); // age (ceiling) for L1
@@ -849,10 +851,10 @@ Type objective_function<Type>::operator() ()
   if(do_post_samp(8) == 1) ADREPORT(WAA_re);
 
   // ---------------------------------------------------------------------
-  // Growth:
+  // Growth (length-at-age)
   array<Type> GW_par(n_years_model + n_years_proj,n_ages,n_growth_par); // array for growth parameters
   int count_wheresub = 0; // used for growth and LW in Ecov
-  if(is_parametric == 1) { // parametric and semiparametric
+  if(isG_parametric == 1) { // parametric and semiparametric
 	  // Construct growth parameters during model period
 	  for(int j = 0; j < n_growth_par; j++) { 
 		  for(int y = 0; y < n_years_model; y++) { 
@@ -903,7 +905,7 @@ Type objective_function<Type>::operator() ()
   
   // nonparametric LAA:
   matrix<Type> LAA_nonpar(n_years_model + n_years_proj,n_ages); 
-  if((is_nonparametric == 1) & (is_parametric == 0)) { // nonparametric
+  if((isG_nonparametric == 1) & (isG_parametric == 0)) { // nonparametric
 	  // Construct LAA parameters during model period
 	  for(int y = 0; y < n_years_model; y++) { 
 			for(int a = 0; a < n_ages; a++) { 
@@ -947,102 +949,104 @@ Type objective_function<Type>::operator() ()
   // Update SDgrowth_par:
   vector<Type> SD_len(2); // always 2 parameters
   for(int i=0; i < 2; i++) {
-	  if(is_parametric == 1) SD_len(i) = exp(SDgrowth_par(i)); // parametric and semiparametric
-	  if((is_nonparametric == 1) & (is_parametric == 0)) SD_len(i) = exp(SDLAA_par(i)); // nonparametric approach
+	  if(isG_parametric == 1) SD_len(i) = exp(SDgrowth_par(i)); // parametric and semiparametric
+	  if((isG_nonparametric == 1) & (isG_parametric == 0)) SD_len(i) = exp(SDLAA_par(i)); // nonparametric approach
   }
   REPORT(SD_len);
 
   // ---------------------------------------------------------------------
-  // Construct LW parameters per year 
+  // Growth (weight-at-age)
   array<Type> LW_par(n_years_model + n_years_proj,n_ages,n_LW_par); // array for LW parameters
-  for(int j = 0; j < n_LW_par; j++) { 
+  if(isW_parametric == 1) { // parametric and semiparametric
+	  // Construct LW parameters during model period
+	  for(int j = 0; j < n_LW_par; j++) { 
+		  for(int y = 0; y < n_years_model; y++) { 
+				for(int a = 0; a < n_ages; a++) { 
+					LW_par(y,a,j) = exp(LW_a(j,0) + LW_re(y,a,j)); 
+				}
+		  }
+	   }
+	  // add to LW parameters in projection years
+	  if(do_proj == 1){ 
+		for(int j = 0; j < n_LW_par; j++) { 
+		  if(proj_LW_opt(j) == 2){
+			  matrix<Type> LW_toavg(n_toavg,n_ages);
+			  for(int a = 0; a < n_ages; a++){
+				for(int i = 0; i < n_toavg; i++){
+				  LW_toavg(i,a) = LW_par(avg_years_ind(i),a,j);
+				}
+			  }
+			  vector<Type> LW_proj = LW_toavg.colwise().mean();
+			  for(int y = n_years_model; y < n_years_model + n_years_proj; y++){
+				for(int a = 0; a < n_ages; a++){
+				  LW_par(y,a,j) = LW_proj(a);
+				}
+			  }
+		  } else { // proj_LW_opt == 1
+			for(int y = n_years_model; y < n_years_model + n_years_proj; y++) {
+				for(int a = 0; a < n_ages; a++) { 		
+					LW_par(y,a,j) = exp(LW_a(j,0) + LW_re(y,a,j)); 
+				}
+			}
+		  }
+		}
+	  }
+	  // add ecov effect on LW paramteres
+	  for(int j = 0; j < n_LW_par; j++) { 
+		for(int i=0; i < n_Ecov; i++){
+			if((Ecov_where(i,n_effects-2) == 1) & ((Ecov_where_subindex(count_wheresub)-1) == j)) {  // for LW
+				for(int y = 0; y < n_years_model + n_years_proj; y++) {
+					for(int a = 0; a < n_ages; a++) { 
+						LW_par(y,a,j) *= exp(Ecov_lm(i,n_effects-2,y,0));
+					}
+				}
+				count_wheresub += 1;
+			}
+		}
+	  } 
+  }
+  
+  // nonparametric WAA:
+  matrix<Type> WAA_nonpar(n_years_model + n_years_proj,n_ages); 
+  if((isW_nonparametric == 1) & (isW_parametric == 0)) { // nonparametric
+	  // Construct WAA parameters per year
 	  for(int y = 0; y < n_years_model; y++) { 
 			for(int a = 0; a < n_ages; a++) { 
-				LW_par(y,a,j) = exp(LW_a(j,0) + LW_re(y,a,j)); 
+				WAA_nonpar(y,a) = exp(WAA_a(a) + WAA_re(y,a)); 
 			}
 	  }
-   }
-
-  // add to LW parameters in projection years
-  if((do_proj == 1) & (weight_model == 2)){ 
-  	for(int j = 0; j < n_LW_par; j++) { 
-	  if(proj_LW_opt(j) == 2){
-		  matrix<Type> LW_toavg(n_toavg,n_ages);
+	  // add to WAA parameters in projection years
+	  if(do_proj == 1){ 
+		if(proj_WAA_opt(0) == 2){
+		  matrix<Type> WAA_toavg(n_toavg,n_ages);
 		  for(int a = 0; a < n_ages; a++){
 			for(int i = 0; i < n_toavg; i++){
-			  LW_toavg(i,a) = LW_par(avg_years_ind(i),a,j);
+			  WAA_toavg(i,a) = WAA_nonpar(avg_years_ind(i),a);
 			}
 		  }
-		  vector<Type> LW_proj = LW_toavg.colwise().mean();
+		  vector<Type> WAA_proj = WAA_toavg.colwise().mean();
 		  for(int y = n_years_model; y < n_years_model + n_years_proj; y++){
-			for(int a = 0; a < n_ages; a++){
-			  LW_par(y,a,j) = LW_proj(a);
-			}
+			WAA_nonpar.row(y) = WAA_proj;
 		  }
-	  } else { // proj_LW_opt == 1
-		for(int y = n_years_model; y < n_years_model + n_years_proj; y++) {
-			for(int a = 0; a < n_ages; a++) { 		
-				LW_par(y,a,j) = exp(LW_a(j,0) + LW_re(y,a,j)); 
-			}
-		}
-	  }
-	}
-  }
-  
-  // Construct WAA parameters per year
-  matrix<Type> WAA_par(n_years_model + n_years_proj,n_ages); 
-  for(int y = 0; y < n_years_model; y++) { 
-		for(int a = 0; a < n_ages; a++) { 
-			WAA_par(y,a) = exp(WAA_a(a) + WAA_re(y,a)); 
-		}
-  }
-
-  // add to WAA parameters in projection years
-  if((do_proj == 1) & (weight_model == 3)){ 
-	if(proj_WAA_opt(0) == 2){
-	  matrix<Type> WAA_toavg(n_toavg,n_ages);
-	  for(int a = 0; a < n_ages; a++){
-		for(int i = 0; i < n_toavg; i++){
-		  WAA_toavg(i,a) = WAA_par(avg_years_ind(i),a);
-		}
-	  }
-	  vector<Type> WAA_proj = WAA_toavg.colwise().mean();
-	  for(int y = n_years_model; y < n_years_model + n_years_proj; y++){
-		WAA_par.row(y) = WAA_proj;
-	  }
-	} else { // proj_WAA_opt == 1
-		for(int y = n_years_model; y < n_years_model + n_years_proj; y++) {
-			for(int a = 0; a < n_ages; a++) { 		
-				WAA_par(y,a) = exp(WAA_a(a) + WAA_re(y,a)); 
-			}
-		}
-	}
-  }
-  
-  // add ecov effect on LW paramteres
-  for(int j = 0; j < n_LW_par; j++) { 
-	for(int i=0; i < n_Ecov; i++){
-		if((Ecov_where(i,n_effects-2) == 1) & ((Ecov_where_subindex(count_wheresub)-1) == j)) {  // for LW
-			for(int y = 0; y < n_years_model + n_years_proj; y++) {
-				for(int a = 0; a < n_ages; a++) { 
-					LW_par(y,a,j) *= exp(Ecov_lm(i,n_effects-2,y,0));
-				}
-			}
-			count_wheresub += 1;
-		}
-    }
-  }  
-  
-  // add ecov effect on WAA
-	for(int i=0; i < n_Ecov; i++){
-		if(Ecov_where(i,n_effects-1) == 1) {  
-			for(int y = 0; y < n_years_model + n_years_proj; y++) {
-				for(int a = 0; a < n_ages; a++) { 
-					WAA_par(y,a) *= exp(Ecov_lm(i,n_effects-1,y,a));
+		} else { // proj_WAA_opt == 1
+			for(int y = n_years_model; y < n_years_model + n_years_proj; y++) {
+				for(int a = 0; a < n_ages; a++) { 		
+					WAA_nonpar(y,a) = exp(WAA_a(a) + WAA_re(y,a)); 
 				}
 			}
 		}
-    }
+	  }
+	  // add ecov effect on WAA
+		for(int i=0; i < n_Ecov; i++){
+			if(Ecov_where(i,n_effects-1) == 1) {  
+				for(int y = 0; y < n_years_model + n_years_proj; y++) {
+					for(int a = 0; a < n_ages; a++) { 
+						WAA_nonpar(y,a) *= exp(Ecov_lm(i,n_effects-1,y,a));
+					}
+				}
+			}
+		}
+  }
   
   // --------------------------------------------------------------------------
   // Calculate mean-LAA, SDAA, and transition matrix, for all years (January 1st): 
@@ -1070,7 +1074,7 @@ Type objective_function<Type>::operator() ()
 	  for(int a = 0; a < n_ages; a++) {
 		  
 			// calculate mean length-at-age:
-		    if(is_parametric == 1) {
+		    if(isG_parametric == 1) {
 
 				if(growth_model == 1) { // parametric: vB classic growth model
 					b_len = (GW_par(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
@@ -1148,14 +1152,14 @@ Type objective_function<Type>::operator() ()
 
 		    }				
 
-			if((is_nonparametric == 0) & (is_parametric == 1)) LAA(y,a) = LAA_par(y,a); // parametric approach
-			if((is_nonparametric == 1) & (is_parametric == 0)) LAA(y,a) = LAA_nonpar(y,a); // nonparametric approach
+			if((isG_nonparametric == 0) & (isG_parametric == 1)) LAA(y,a) = LAA_par(y,a); // parametric approach
+			if((isG_nonparametric == 1) & (isG_parametric == 0)) LAA(y,a) = LAA_nonpar(y,a); // nonparametric approach
 			
 	  } // loop age
   } // loop year 
 	  
 // semiparametric approach:	
-  if((is_nonparametric == 1) & (is_parametric == 1)) { // semiparametric approach
+  if((isG_nonparametric == 1) & (isG_parametric == 1)) { // semiparametric approach
 	  for(int y = 0; y < n_years_model + n_years_proj; y++) for(int a = 0; a < n_ages; a++) LAA(y,a) = exp(log(LAA_par(y,a)) + LAA_re(y,a));
   }
 
@@ -1164,7 +1168,7 @@ Type objective_function<Type>::operator() ()
   {	  
 	  for(int a = 0; a < n_ages; a++) {
 			// SD calculation: 
-			if(is_parametric == 1) { // for parametric and semiparametric approach
+			if(isG_parametric == 1) { // for parametric and semiparametric approach
 				if((a + 1.0) < age_L1) { // same as SD1
 					SDAA(y,a) = SD_len(0); 
 				} else { 
@@ -1176,7 +1180,7 @@ Type objective_function<Type>::operator() ()
 					}
 				}				
 			}
-			if((is_nonparametric == 1) & (is_parametric == 0)) { // only for nonparametric approach
+			if((isG_nonparametric == 1) & (isG_parametric == 0)) { // only for nonparametric approach
 				Slope = (SD_len(1) - SD_len(0))/(LAA(y,n_ages-1)-LAA(y,0));
 				SDAA(y,a) = SD_len(0) + Slope*(LAA(y,a)-LAA(y,0));  
 			}
@@ -1204,7 +1208,7 @@ Type objective_function<Type>::operator() ()
 	  } // loop age
   } // loop year
 
-  if(do_post_samp.sum()==0) if(weight_model == 2) ADREPORT(LAA);// only when LAA is relevant
+  if(do_post_samp.sum()==0) if(isW_parametric == 1) ADREPORT(LAA);// only when LAA is relevant
 
   // --------------------------------------------------------------------------
   // Calculate phi matrix at all year fractions (will follow information in waa pointers)
@@ -1216,16 +1220,16 @@ Type objective_function<Type>::operator() ()
   // January 1st:
   phi_matrix(waa_pointer_jan1-1) = phi_mat; // calculated in previous section
   // SSB:
-  phi_matrix(waa_pointer_ssb-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_SSB, is_parametric, is_nonparametric, growth_model, age_L1);
+  phi_matrix(waa_pointer_ssb-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_SSB, isG_parametric, isG_nonparametric, growth_model, age_L1);
   // Total catch:
-  phi_matrix(waa_pointer_totcatch-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_catch, is_parametric, is_nonparametric, growth_model, age_L1);
+  phi_matrix(waa_pointer_totcatch-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, fracyr_catch, isG_parametric, isG_nonparametric, growth_model, age_L1);
   // For fleets:
   for(int f = 0; f < n_fleets; f++) {
 	 phi_matrix(waa_pointer_fleets(f)-1) = phi_matrix(waa_pointer_totcatch-1); // use same as total catch, fraction = 0.5
   }
   // For indices:
   for(int i = 0; i < n_indices; i++) {
-	 phi_matrix(waa_pointer_indices(i)-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, vector<Type>(fracyr_indices.col(i)), is_parametric, is_nonparametric, growth_model, age_L1);
+	 phi_matrix(waa_pointer_indices(i)-1) = pred_LAA(LAA, n_yrs, n_years_model, SD_len, GW_par, lengths, vector<Type>(fracyr_indices.col(i)), isG_parametric, isG_nonparametric, growth_model, age_L1);
   }
   
   // --------------------------------------------------------------------------
@@ -1239,11 +1243,11 @@ Type objective_function<Type>::operator() ()
 	vector<Type> t_cv_waa(n_ages);
 	array<Type> waa_proj(waa.dim(0), n_years_proj, n_ages);
 	matrix<Type> watl(n_years_model + n_years_proj, n_lengths);
-	watl.setZero(); // full of zeros when weight_model = 1 or 3
+	watl.setZero(); // full of zeros using ewaa or nonparametric
 	array<Type> nll_waa(waa.dim(0), n_years_model);
 	Type lenmid = (lengths(1) - lengths(0))*0.5;
 	nll_waa.setZero();
-  if(weight_model == 1) {
+  if(isW_ewaa == 1) { // empirical weight-at-age
   	// Replace pred_waa by waa to be used later:
 	for(int y = 0; y < n_years_model + n_years_proj; y++) {
 		for(int a = 0; a < n_ages; a++) { 
@@ -1259,7 +1263,7 @@ Type objective_function<Type>::operator() ()
 		}
 	}
   } else {
-		if(weight_model == 2) {
+		if((isW_parametric == 1) & (isW_nonparametric == 0)) { // parametric approach: LW
 			  // For Jan-1
 			  out_phi_mat = phi_matrix(waa_pointer_jan1-1);
 			  for(int y = 0; y < n_years_model + n_years_proj; y++) { // 
@@ -1354,8 +1358,9 @@ Type objective_function<Type>::operator() ()
 				}
 				
 			  nll += nll_waa.sum();	
-		} else {
-			// weight_model == 3
+		} 
+		
+		if((isW_nonparametric == 1) & (isW_parametric == 0)) {// nonparametric approach
 			vector<Type> fracyr_WAA(n_ages);
 			for(int y = 0; y < n_years_model + n_years_proj; y++) {
 				int yuse = y;
@@ -1365,16 +1370,16 @@ Type objective_function<Type>::operator() ()
 				
 				// For Jan-1
 				for(int a = 0; a < n_ages; a++) { 
-					pred_waa(waa_pointer_jan1 - 1,y,a) = WAA_par(y,a); // jan-1st
+					pred_waa(waa_pointer_jan1 - 1,y,a) = WAA_nonpar(y,a); // jan-1st
 				}
 				// For SSB
-				fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_par.row(y)), vector<Type>(WAA_par.row(y_1)), fracyr_SSB(yuse));
+				fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_nonpar.row(y)), vector<Type>(WAA_nonpar.row(y_1)), fracyr_SSB(yuse));
 				for(int a = 0; a < n_ages; a++) { 
 					pred_waa(waa_pointer_ssb - 1,y,a) = fracyr_WAA(a); // SSB
 				}
 				// For fleets
 				for(int f = 0; f < n_fleets; f++) {
-					fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_par.row(y)), vector<Type>(WAA_par.row(y_1)), fracyr_catch(yuse));
+					fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_nonpar.row(y)), vector<Type>(WAA_nonpar.row(y_1)), fracyr_catch(yuse));
 					for(int a = 0; a < n_ages; a++) { 
 						pred_waa(waa_pointer_fleets(f)-1,y,a) = fracyr_WAA(a); 
 						pred_waa(waa_pointer_totcatch-1,y,a) = fracyr_WAA(a); // for total catch, it is using the last fracyr_fleets
@@ -1403,7 +1408,7 @@ Type objective_function<Type>::operator() ()
 				
 				// For indices
 				for(int i = 0; i < n_indices; i++) {
-					fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_par.row(y)), vector<Type>(WAA_par.row(y_1)), fracyr_indices(yuse,i));
+					fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_nonpar.row(y)), vector<Type>(WAA_nonpar.row(y_1)), fracyr_indices(yuse,i));
 					for(int a = 0; a < n_ages; a++) { 
 						pred_waa(waa_pointer_indices(i)-1,y,a) = fracyr_WAA(a); // for indices	
 						t_pred_waa(a) = fracyr_WAA(a); // save it as vector predictions							
@@ -1432,10 +1437,13 @@ Type objective_function<Type>::operator() ()
 			}
 			nll += nll_waa.sum();	
 		} 
+		
+		// TODO: semiparametric approach
+		
   }
   REPORT(pred_waa);	
   REPORT(nll_waa);
-  if(do_post_samp.sum()==0) if(weight_model > 1) ADREPORT(pred_waa); // If smoothing the WAA matrix get SEs
+  if(do_post_samp.sum()==0) if((isW_nonparametric == 1) | (isW_parametric == 1)) ADREPORT(pred_waa); // If smoothing the WAA matrix get SEs
   SIMULATE if(simulate_data(0) == 1) if(simulate_period(0) == 1) REPORT(waa); // fisheries
   SIMULATE if(simulate_data(1) == 1) if(simulate_period(0) == 1) REPORT(waa); // indices
   SIMULATE if(simulate_data(0) == 1) if(simulate_period(1) == 1) REPORT(waa_proj); // fisheries

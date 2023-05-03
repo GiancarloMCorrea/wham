@@ -450,7 +450,8 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 
 	waa_opts = NULL
 	waa_names = c("waa", "waa_pointer_indices", "waa_pointer_fleets", "waa_pointer_totcatch", 
-					"waa_pointer_ssb", "waa_pointer_jan1", "weight_model", "waa_cv", "use_catch_waa", "use_index_waa")
+					"waa_pointer_ssb", "waa_pointer_jan1", "isW_ewaa", 
+					"waa_cv", "use_catch_waa", "use_index_waa")
 	if(any(names(basic_info) %in% waa_names)) waa_opts = basic_info[waa_names]
 
 	catch_opts = NULL
@@ -509,10 +510,6 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 	input = set_indices(input, index_opts)
 	#print("indices")
 
-	# WAA in case we want to modify how weight-at age is handled
-	input = set_WAA(input, waa_opts, WAA)
-	#print("WAA")
-
 	# NAA and recruitment options
 	input = set_NAA(input, NAA_re)
 	#print("NAA")
@@ -530,9 +527,15 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 	# LAA non parametric (always after the set_growth function)
 	input = set_LAA(input, LAA, growth)
 
-	# LW
+	if(!is.null(LW) & !is.null(WAA)) stop("Semiparametric approach for weight-at-age not implemented yet. Please provide either LW or WAA.")
+
+	# LW: parametric approach
 	input = set_LW(input, LW)
 	#print("LW")
+
+	# WAA nonparametric approach or EWAA
+	input = set_WAA(input, waa_opts, WAA, LW)
+	#print("WAA")
 
 	# Age composition model
 	input = set_age_comp(input, age_comp)

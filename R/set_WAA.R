@@ -1,4 +1,4 @@
-set_WAA = function(input, waa_opts = NULL, WAA)
+set_WAA = function(input, waa_opts = NULL, WAA, LW)
 {
   # Empirical Weight-at-age data ----------------------------------------------------------------------------------
 
@@ -7,6 +7,7 @@ set_WAA = function(input, waa_opts = NULL, WAA)
 	data = input$data
   data$use_catch_waa = matrix(0, nrow = data$n_years_model, ncol = data$n_fleets)
   data$use_index_waa = matrix(0, nrow = data$n_years_model, ncol = data$n_indices)
+  data$isW_ewaa = 1L # default value
 	if(!is.null(asap3))
 	{
 	  i <- c(seq(1,(asap3$n_fleets+1)*2-1,2),(asap3$n_fleets+1)*2 + 1:2)
@@ -18,20 +19,27 @@ set_WAA = function(input, waa_opts = NULL, WAA)
     data$waa_pointer_totcatch = WAA_pointers[data$n_fleets + 1]
     data$waa_pointer_ssb = WAA_pointers[data$n_fleets + 2]
     data$waa_pointer_jan1 = WAA_pointers[data$n_fleets + 3]
-	  data$weight_model = 1 # 1 = waa info present and used
+    # if ASAP3 input provided, automatically use EWAA:
+	  data$isW_ewaa = 1L
+    data$isW_parametric = 0L
+    data$isW_nonparametric = 0L
 	  data$waa_cv = array(0, dim = dim(data$waa))
 	} else {
-    	if(is.null(waa_opts[["waa"]])){
+    if(is.null(waa_opts[["waa"]])){
 	    	#L = 100*(1-exp(-0.3*(1:data$n_ages - 0)))
 		    #W = rep(exp(-11)*L^3, each = data$n_years_model)
         if(is.null(waa_opts$waa_pointer_totcatch) | is.null(waa_opts$waa_pointer_ssb) | is.null(waa_opts$waa_pointer_jan1) | is.null(waa_opts$waa_pointer_fleets) | is.null(waa_opts$waa_pointer_indices)) {
-          stop("If 'waa' is not available, waa pointers must be provided: 'waa_pointer_totcatch', 'waa_pointer_ssb', 'waa_pointer_jan1', 'waa_pointer_fleets', 'waa_pointer_indices'.")
+          stop("If 'waa' is not available, waa pointers must be provided: 
+            'waa_pointer_totcatch', 'waa_pointer_ssb', 'waa_pointer_jan1', 'waa_pointer_fleets', 'waa_pointer_indices'.")
+        }
+        if(is.null(WAA) & is.null(LW) ) {
+          stop("'waa' (data), 'LW', 'WAA' (parameters) not provided, so there is no way to calculate population mean weight-at-age. 
+            Please, provide one of those.")
         }
         n_pointers = max(c(waa_opts$waa_pointer_totcatch, waa_opts$waa_pointer_ssb, waa_opts$waa_pointer_jan1, waa_opts$waa_pointer_fleets, waa_opts$waa_pointer_indices)) 
         dim_WAA = c(n_pointers, data$n_years_model, data$n_ages)
 				data$waa = array(2, dim = dim_WAA) # 2 kg for all ages, this will be replaced in WHAM	
-				data$weight_model = 2 # 2 = waa info not provided. use LW
-				data$waa_cv = array(0, dim = dim_WAA)		
+				data$waa_cv = array(0, dim = dim_WAA)	# not use waa information for LL calculation	
 		} else {
 			data$waa = waa_opts$waa
       dim_waa = dim(data$waa)
@@ -41,7 +49,6 @@ set_WAA = function(input, waa_opts = NULL, WAA)
       data$waa_pointer_totcatch = WAA_pointers[data$n_fleets + 1]
       data$waa_pointer_ssb = WAA_pointers[data$n_fleets + 2]
       data$waa_pointer_jan1 = WAA_pointers[data$n_fleets + 3]
-			data$weight_model = 1
 			data$waa_cv = array(0, dim = dim(data$waa))
 		}
 		
@@ -55,13 +62,12 @@ set_WAA = function(input, waa_opts = NULL, WAA)
 
 		if(!is.null(waa_opts$waa_pointer_jan1)) data$waa_pointer_jan1 = waa_opts$waa_pointer_jan1
 
-		if(!is.null(waa_opts$weight_model))  data$weight_model = waa_opts$weight_model
-
 		if(!is.null(waa_opts$waa_cv)) data$waa_cv = waa_opts$waa_cv
 
 		if(!is.null(waa_opts$use_catch_waa)) data$use_catch_waa = waa_opts$use_catch_waa
 
 		if(!is.null(waa_opts$use_index_waa)) data$use_index_waa = waa_opts$use_index_waa
+
 	}
 
   input$data = data
@@ -77,16 +83,24 @@ set_WAA = function(input, waa_opts = NULL, WAA)
   # LAA default options:
   WAA_re_ini = matrix(0, ncol = data$n_ages, nrow = data$n_years_model)
   data$WAA_re_model = 1
-  data$WAA_est = rep(0, data$n_ages)
+  data$WAA_est = rep(0, times = data$n_ages)
+  data$isW_nonparametric = 0L # default: it is not nonparametric
   WAA_ini = log( 2e-06*(100 + (3 - 100)*exp(-0.2*(1:data$n_ages - 1)))^3 )
+
+  if(!is.null(LW)) data$isW_ewaa = 0L # turn off EWAA if LW provided
+
   if(!is.null(WAA)) {
-    data$weight_model = 3 # use WAA
+
+    data$isW_nonparametric = 1L # it is nonparametric
+    data$isW_ewaa = 0L # turn off EWAA if WAA provided
+
     WAA_ini = log(WAA$WAA_vals)
     if(!is.null(WAA$est_pars)) data$WAA_est[WAA$est_pars] = 1
     if(!is.null(WAA$re))  {
       if(!(WAA$re %in% c("none","iid","iid_a","ar1_a","2dar1"))) stop("WAA$re must be one of the following: 'none','iid','iid_a','ar1_a','2dar1'")
       data$WAA_re_model <- match(WAA$re, c("none","iid","iid_a","ar1_a","2dar1")) # Respect this order to create array later
     }
+
   }
 
   # organize par --------------------------
@@ -97,12 +111,18 @@ set_WAA = function(input, waa_opts = NULL, WAA)
   par$WAA_repars[1] = log(0.1) # start sigma at 0.1, rho at 0
 
   # --------------------------------
-  # organize map
-  tmp1 <- par$WAA_a
-  tmp1[data$WAA_est==0] = NA
-  ind.notNA <- which(!is.na(tmp1))
-  tmp1[ind.notNA] <- 1:length(ind.notNA)
-  map$WAA_a <- factor(tmp1)
+  # map WAA:
+  map$WAA_a <- factor(rep(NA, times = data$n_ages))
+
+  if(is.null(LW)) { # only do it if nonparametric
+  
+    tmp1 <- par$WAA_a
+    tmp1[data$WAA_est==0] = NA
+    ind.notNA <- which(!is.na(tmp1))
+    tmp1[ind.notNA] <- 1:length(ind.notNA)
+    map$WAA_a <- factor(tmp1)
+
+  }
 
   # RE info:
   # LAA_re: "none","iid","iid_a","ar1_a","2dar1"

@@ -483,7 +483,8 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
   # }
 
   # Somatic growth
-    if(data$is_parametric == 1){
+    # parametric:
+    if(data$isG_parametric == 1){
 
       Gpar_vector = as.vector(pars$growth_a)
       if(data$growth_model == 1) Gpar_names = c('K', 'Linf', 'L1')
@@ -523,9 +524,9 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
 
     }
 
-    if(data$is_nonparametric == 1){
-      if(is_parametric == 0) {
-        Gpar_vector = as.vector(pars$growth_a)
+    # nonparametric
+    if(data$isG_nonparametric == 1){
+      if(data$isG_parametric == 0) {
         fe.names = c(fe.names, paste0("Mean length for age ", mod$ages.lab))
         fe.vals = c(fe.vals, exp(pars$LAA_a))
         for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$LAA_a[a], sd$LAA_a[a], type = "exp"))
@@ -548,7 +549,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       }
 
       # SD information:
-      if(is_parametric == 0) {
+      if(data$isG_parametric == 0) {
         SD_vector = as.vector(pars$SDLAA_par)
         fe.names = c(fe.names, c('SD1', 'SDA'))
         fe.vals = c(fe.vals, exp(SD_vector))
@@ -557,7 +558,8 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
     }
 
   # LW parameters
-  if(data$weight_model == 2 | data$weight_model == 3) {
+    # parametric:
+  if(data$isW_parametric == 1) {
     LW_vector = as.vector(pars$LW_a)
     LWpar_names = c("a (length-weight)", "b (length-weight)")
     fe.names = c(fe.names, LWpar_names)
@@ -587,6 +589,33 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
         }
       }
   }
+
+  # nonparametric
+    if(data$isW_nonparametric == 1){
+      if(data$isW_parametric == 0) {
+        fe.names = c(fe.names, paste0("Mean weight for age ", mod$ages.lab))
+        fe.vals = c(fe.vals, exp(pars$WAA_a))
+        for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$WAA_a[a], sd$WAA_a[a], type = "exp"))
+      }
+    
+      if(data$LAA_re_model > 1) {
+        fe.names = c(fe.names, "LAA RE $\\sigma$")
+        fe.vals = c(fe.vals, exp(pars$LAA_repars[1]))
+        fe.cis = rbind(fe.cis, ci(pars$LAA_repars[1], sd$LAA_repars[1], type = "exp"))
+        if(data$LAA_re_model%in%c(4,5)){
+          fe.names = c(fe.names, "LAA RE $\\rho$ (age)")
+          fe.vals = c(fe.vals, exp(pars$LAA_repars[2]))
+          fe.cis = rbind(fe.cis, ci(pars$LAA_repars[2], sd$LAA_repars[2], type = "exp"))
+          if(data$LAA_re_model == c(5)){
+            fe.names = c(fe.names, "LAA RE $\\rho$ (year)")
+            fe.vals = c(fe.vals, exp(pars$LAA_repars[3]))
+            fe.cis = rbind(fe.cis, ci(pars$LAA_repars[3], pars$LAA_repars[3], lo = -1, hi = 1, type = "expit", k = 2))
+          }
+        }
+      }
+
+    }
+
 
 
   if(sum(!is.na(mod$input$map$log_catch_sig_scale))){ #any agg catch obs var estimated?

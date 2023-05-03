@@ -10,14 +10,16 @@ set_LW = function(input, LW)
   n_par_def = 2 # 2 parameters: a and b: W = a*L^b
   data$LW_re_model = rep(1, times = n_par_def) # default = no RE / 'none'
   data$n_LW_par = n_par_def # 
-  data$LW_est <- rep(0, times = n_par_def) # default = don't estimate M
+  data$LW_est <- rep(0, times = n_par_def) # default 
+  data$isW_parametric = 0L # default
   LW_re_ini = array(0, dim = c(data$n_years_model, data$n_ages, n_par_def))
   LW_ini = c(log(5e-06), log(3)) 
 
   # prepare LW options:
   if(!is.null(LW)){
 
-    data$weight_model = 2 # use LW
+    # if LW provided, then use parametric approach
+    data$isW_parametric = 1L # turn on
 
     if(!is.null(LW$re)){
       

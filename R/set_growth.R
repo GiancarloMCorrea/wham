@@ -13,7 +13,7 @@ set_growth = function(input, growth)
   data$growth_est <- rep(0, times = n_par_def) # default = don't estimate growth parameters
   data$n_growth_par = 3 # number of parameters.
   data$SD_est = c(0,0)
-  data$is_parametric = 1L # default
+  data$isG_parametric = 1L # default
   growth_re_ini = array(0, dim = c(data$n_years_model, data$n_ages, n_par_def))
   growth_ini = c(log(0.2), log(60), log(8)) # K, Linf, and L1
   SD_ini = c(log(3), log(7)) # SD1 and SDA
