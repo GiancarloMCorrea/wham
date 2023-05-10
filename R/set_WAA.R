@@ -78,7 +78,7 @@ set_WAA = function(input, waa_opts = NULL, WAA, LW)
   par = input$par
   map = input$map
     
-  n_re_par = 3 # number of parameters for RE
+  n_re_par = 4 # number of parameters for RE
 
   # LAA default options:
   WAA_re_ini = matrix(0, ncol = data$n_ages, nrow = data$n_years_model)
@@ -97,11 +97,15 @@ set_WAA = function(input, waa_opts = NULL, WAA, LW)
     WAA_ini = log(WAA$WAA_vals)
     if(!is.null(WAA$est_pars)) data$WAA_est[WAA$est_pars] = 1
     if(!is.null(WAA$re))  {
-      if(!(WAA$re %in% c("none","iid","iid_a","ar1_a","2dar1"))) stop("WAA$re must be one of the following: 'none','iid','iid_a','ar1_a','2dar1'")
-      data$WAA_re_model <- match(WAA$re, c("none","iid","iid_a","ar1_a","2dar1")) # Respect this order to create array later
+      if(!(WAA$re %in% c("none","iid","iid_a","ar1_a","2dar1","3dar1"))) stop("WAA$re must be one of the following: 'none','iid','iid_a','ar1_a','2dar1','3dar1'")
+      data$WAA_re_model <- match(WAA$re, c("none","iid","iid_a","ar1_a","2dar1","3dar1")) # Respect this order to create array later
     }
 
   }
+
+  # This section only used for 3D smoother:
+  data$ay3D_IndexW = as.matrix(expand.grid("age" = seq_len(data$n_ages), "year" = seq_len(data$n_years_model) ))
+  if(is.null(data$Var3D_ParamW)) data$Var3D_ParamW = 0 # Var_Param == 0 Conditional, == 1 Marginal
 
   # organize par --------------------------
   
@@ -128,7 +132,7 @@ set_WAA = function(input, waa_opts = NULL, WAA, LW)
   # LAA_re: "none","iid","iid_a","ar1_a","2dar1"
   tmp <- par$WAA_re
   if(data$WAA_re_model == 1) tmp[] = NA # no RE (either estimate RE for all ages or none at all)
-  if(data$WAA_re_model %in% c(2,5)){ # 2d ar1
+  if(data$WAA_re_model %in% c(2,5,6)){ # 2d ar1
     tmp[] = 1:(dim(tmp)[1]*dim(tmp)[2]) # all y,a estimated
   }
   if(data$WAA_re_model %in% c(3,4)){ # ar1_a (devs by age, constant by year)
@@ -137,11 +141,12 @@ set_WAA = function(input, waa_opts = NULL, WAA, LW)
   map$WAA_re <- factor(tmp)
 
   # WAA_repars: 
-  if(data$WAA_re_model == 1) tmp <- rep(NA,3) # no RE pars to estimate
-  if(data$WAA_re_model == 2) tmp <- c(1,NA,NA) # estimate sigma
-  if(data$WAA_re_model == 3) tmp <- c(1,NA,NA) # estimate sigma over ages
-  if(data$WAA_re_model == 4) tmp <- c(1,2,NA) # ar1_a: estimate sigma, rho_a
-  if(data$WAA_re_model == 5) tmp <- 1:3 # 2dar1: estimate all
+  if(data$WAA_re_model == 1) tmp <- rep(NA,n_re_par) # no RE pars to estimate
+  if(data$WAA_re_model == 2) tmp <- c(1,NA,NA, NA) # estimate sigma
+  if(data$WAA_re_model == 3) tmp <- c(1,NA,NA,NA) # estimate sigma over ages
+  if(data$WAA_re_model == 4) tmp <- c(1,2,NA,NA) # ar1_a: estimate sigma, rho_a
+  if(data$WAA_re_model == 5) tmp <- c(1:3, NA) # 2dar1: estimate all
+  if(data$WAA_re_model == 6) tmp <- 1:4 # 2dar1: estimate all
   map$WAA_repars = factor(tmp)
 
   # End section

@@ -102,6 +102,9 @@ Type objective_function<Type>::operator() ()
   DATA_INTEGER(isW_ewaa); // WAA model : use EWAA 1 = yes, 0 = no
   DATA_INTEGER(isW_parametric); // WAA model is parametric? 1 = yes, 0 = no
   DATA_INTEGER(isW_nonparametric); // WAA model is nonparametric? 1 = yes, 0 = no   
+  // Index matrix to loop through to consruct precision matrix (for 3D smoother):
+  DATA_MATRIX(ay3D_IndexG);  // (n_years * n_ages) * 2 
+  DATA_INTEGER(Var3D_ParamG); // Variance parameterization of Precision Matrix == 0 (Conditional), == 1(Marginal)
   DATA_INTEGER(n_growth_par); 
   DATA_INTEGER(growth_model); // 1: "vB-classic", 2: "Richards"
   DATA_INTEGER(isG_parametric); // growth model is parametric? 1 = yes, 0 = no
@@ -111,6 +114,8 @@ Type objective_function<Type>::operator() ()
   DATA_INTEGER(age_L1_ceil); // age (ceiling) for L1
   DATA_INTEGER(n_LW_par);
   DATA_IVECTOR(LW_re_model); // 1 = none, 2 = IID_y, 3 = iid_c, 4 = ar1_y, 5 = ar1_c 
+  DATA_MATRIX(ay3D_IndexW);  // (n_years * n_ages) * 2 
+  DATA_INTEGER(Var3D_ParamW); // Variance parameterization of Precision Matrix == 0 (Conditional), == 1(Marginal)
   DATA_IVECTOR(which_F_age); //which age of F to use for full total F for msy/ypr calculations and projections (n_years_model + n_years_proj)
   DATA_INTEGER(use_steepness); // which parameterization to use for BH/Ricker S-R, if needed.
   DATA_INTEGER(bias_correct_pe); //bias correct lognormal process error?
@@ -670,12 +675,11 @@ Type objective_function<Type>::operator() ()
 
   if(LAA_re_model > 1) // random effects on LAA (either nonparametric or semiparametric approach)
   {
-  
-  Type sigma_LAA = exp(LAA_repars(0)); // first RE parameter
-  Type rho_LAA_a = rho_trans(LAA_repars(1));
-  Type rho_LAA_y = rho_trans(LAA_repars(2));  // second RE parameter
-  Type Sigma_LAA;
-
+	  Type sigma_LAA = exp(LAA_repars(0)); // first RE parameter
+	  Type rho_LAA_a = rho_trans(LAA_repars(1));  // correlation over ages
+	  Type rho_LAA_y = rho_trans(LAA_repars(2));  // correlation over years
+	  Type rho_LAA_c = rho_trans(LAA_repars(3));  // correlation over cohorts
+	  Type Sigma_LAA;
 	  if((LAA_re_model == 2) | (LAA_re_model == 5)) { // iid and 2DAR1
 		// likelihood of LAA deviations
 		  Sigma_LAA = pow(pow(sigma_LAA,2) / ((1-pow(rho_LAA_y,2))*(1-pow(rho_LAA_a,2))),0.5);
@@ -690,23 +694,42 @@ Type objective_function<Type>::operator() ()
 			  }
 			}
 		  }
-	  } else { // for 2 and 3 options
-        vector<Type> LAAre0 = LAA_re.matrix().row(0);
-        Sigma_LAA = pow(pow(sigma_LAA,2) / (1-pow(rho_LAA_a,2)),0.5);
-        nll_LAA += SCALE(AR1(rho_LAA_a), Sigma_LAA)(LAAre0);
-        SIMULATE if(simulate_state(6) == 1) if(sum(simulate_period) > 0) {
-          AR1(rho_LAA_a).simulate(LAAre0);
-          for(int i = 0; i < LAAre0.size(); i++) LAAre0(i) = Sigma_LAA * LAAre0(i);
-          for(int y = 0; y < n_years_model + n_years_proj; y++){
-            for(int i = 0; i < LAAre0.size(); i++) LAA_re(y,i) = LAAre0(i);
-          }
-        }          
-      }
+	  } else {
+		 if((LAA_re_model == 3) | (LAA_re_model == 4)) { // for iid_a and ar1_a options
+			vector<Type> LAAre0 = LAA_re.matrix().row(0);
+			Sigma_LAA = pow(pow(sigma_LAA,2) / (1-pow(rho_LAA_a,2)),0.5);
+			nll_LAA += SCALE(AR1(rho_LAA_a), Sigma_LAA)(LAAre0);
+			SIMULATE if(simulate_state(6) == 1) if(sum(simulate_period) > 0) {
+			  AR1(rho_LAA_a).simulate(LAAre0);
+			  for(int i = 0; i < LAAre0.size(); i++) LAAre0(i) = Sigma_LAA * LAAre0(i);
+			  for(int y = 0; y < n_years_model + n_years_proj; y++){
+				for(int i = 0; i < LAAre0.size(); i++) LAA_re(y,i) = LAAre0(i);
+			  }
+			}          
+		  } else { // option 6: 3D smoother. Author: Cheng et al. (in review)
+			  // Define precision matrix for GMRF
+			  int total_n = (n_years_model + n_years_proj)*n_ages;
+			  Eigen::SparseMatrix<Type> Q_sparseG(total_n, total_n); // Precision matrix
+			  // Construct precision matrix here
+			  Q_sparseG = construct_Q(n_years_model, n_ages, ay3D_IndexG, rho_LAA_y, rho_LAA_a, rho_LAA_c, sigma_LAA, Var3D_ParamG);
+			  nll_LAA += GMRF(Q_sparseG)(LAA_re); 
+		  	SIMULATE if(simulate_state(6) == 1) if(sum(simulate_period) > 0) {
+				vector<Type> LAAre_tmp(LAA_re.cols()*LAA_re.rows()); // should be a vector
+				GMRF(Q_sparseG).simulate(LAAre_tmp);
+				for(int y = 0; y < n_years_model + n_years_proj; y++){
+				  if(((simulate_period(0) == 1) & (y < n_years_model)) | ((simulate_period(1) == 1) & (y > n_years_model-1))){
+					for(int a = 0; a < n_ages; a++) LAA_re(y,a) = LAAre_tmp((n_years_model+n_years_proj)*a + y); // sort vector into WAA_re array
+				  }
+				}
+			}
+		  }
+	 }		  
 	   
 	if(do_post_samp.sum()==0){
 		ADREPORT(sigma_LAA);
 		ADREPORT(rho_LAA_a);
 		ADREPORT(rho_LAA_y);
+		ADREPORT(rho_LAA_c);
 	}
 		  
   }
@@ -801,28 +824,30 @@ Type objective_function<Type>::operator() ()
   Type nll_WAA = Type(0);
 	
 	if(WAA_re_model > 1) // random effects on WAA
-	  {
+	{
 	  
 	  Type sigma_WAA = exp(WAA_repars(0)); // first RE parameter
 	  Type rho_WAA_a = rho_trans(WAA_repars(1));
 	  Type rho_WAA_y = rho_trans(WAA_repars(2));  // second RE parameter
+	  Type rho_WAA_c = rho_trans(WAA_repars(3));  // second RE parameter
 	  Type Sigma_WAA;
 
-		  if((WAA_re_model == 2) | (WAA_re_model == 5)) { // 
-			// likelihood of WAA deviations
-			  Sigma_WAA = pow(pow(sigma_WAA,2) / ((1-pow(rho_WAA_y,2))*(1-pow(rho_WAA_a,2))),0.5);
-			  nll_WAA += SCALE(SEPARABLE(AR1(rho_WAA_a),AR1(rho_WAA_y)), Sigma_WAA)(WAA_re); // must be array, not matrix!
-			  SIMULATE if(simulate_state(8) == 1) if(sum(simulate_period) > 0) {
-				array<Type> WAAre_tmp = WAA_re;
-				SEPARABLE(AR1(rho_WAA_a),AR1(rho_WAA_y)).simulate(WAAre_tmp);
-				WAAre_tmp = Sigma_WAA * WAAre_tmp;
-				for(int y = 0; y < n_years_model + n_years_proj; y++){
-				  if(((simulate_period(0) == 1) & (y < n_years_model)) | ((simulate_period(1) == 1) & (y > n_years_model-1))){
-					for(int a = 0; a < n_ages; a++) WAA_re(y,a) = WAAre_tmp(y,a);
-				  }
-				}
+	  if((WAA_re_model == 2) | (WAA_re_model == 5)) { // 
+		// likelihood of WAA deviations
+		  Sigma_WAA = pow(pow(sigma_WAA,2) / ((1-pow(rho_WAA_y,2))*(1-pow(rho_WAA_a,2))),0.5);
+		  nll_WAA += SCALE(SEPARABLE(AR1(rho_WAA_a),AR1(rho_WAA_y)), Sigma_WAA)(WAA_re); // must be array, not matrix!
+		  SIMULATE if(simulate_state(8) == 1) if(sum(simulate_period) > 0) {
+			array<Type> WAAre_tmp = WAA_re;
+			SEPARABLE(AR1(rho_WAA_a),AR1(rho_WAA_y)).simulate(WAAre_tmp);
+			WAAre_tmp = Sigma_WAA * WAAre_tmp;
+			for(int y = 0; y < n_years_model + n_years_proj; y++){
+			  if(((simulate_period(0) == 1) & (y < n_years_model)) | ((simulate_period(1) == 1) & (y > n_years_model-1))){
+				for(int a = 0; a < n_ages; a++) WAA_re(y,a) = WAAre_tmp(y,a);
 			  }
-		  } else { // for 3 and 4 options (age)
+			}
+		  }
+	  } else {
+		  if((WAA_re_model == 3) | (WAA_re_model == 4)) { // for 3 and 4 options (age)
 			vector<Type> WAAre0 = WAA_re.matrix().row(0);
 			Sigma_WAA = pow(pow(sigma_WAA,2) / (1-pow(rho_WAA_a,2)),0.5);
 			nll_WAA += SCALE(AR1(rho_WAA_a), Sigma_WAA)(WAAre0);
@@ -833,22 +858,38 @@ Type objective_function<Type>::operator() ()
 				for(int i = 0; i < WAAre0.size(); i++) WAA_re(y,i) = WAAre0(i);
 			  }
 			}          
-		  }
-		   
+		  } else { // 3D smoother (WAA_re_model == 6). Author: Cheng et al. (in review)
+			  // Define precision matrix for GMRF
+			  int total_n = (n_years_model + n_years_proj)*n_ages;
+			  Eigen::SparseMatrix<Type> Q_sparseW(total_n, total_n); // Precision matrix
+			  // Construct precision matrix here
+			  Q_sparseW = construct_Q(n_years_model, n_ages, ay3D_IndexW, rho_WAA_y, rho_WAA_a, rho_WAA_c, sigma_WAA, Var3D_ParamW);
+			  nll_WAA += GMRF(Q_sparseW)(WAA_re); 
+			  SIMULATE if(simulate_state(8) == 1) if(sum(simulate_period) > 0) {
+				vector<Type> WAAre_tmp(WAA_re.cols()*WAA_re.rows()); // should be a vector
+				GMRF(Q_sparseW).simulate(WAAre_tmp);
+				for(int y = 0; y < n_years_model + n_years_proj; y++){
+				  if(((simulate_period(0) == 1) & (y < n_years_model)) | ((simulate_period(1) == 1) & (y > n_years_model-1))){
+					for(int a = 0; a < n_ages; a++) WAA_re(y,a) = WAAre_tmp((n_years_model+n_years_proj)*a + y); // sort vector into WAA_re array
+				  }
+				}
+			  }
+			}  
+	  }
 		if(do_post_samp.sum()==0){
 			ADREPORT(sigma_WAA);
 			ADREPORT(rho_WAA_a);
 			ADREPORT(rho_WAA_y);
+			ADREPORT(rho_WAA_c);
 		}
 			  
-	  }
-	    
+	}
   REPORT(nll_WAA);
   nll += nll_WAA; 
-  REPORT(WAA_a);
   REPORT(WAA_re);
-  REPORT(WAA_repars);
   if(do_post_samp(8) == 1) ADREPORT(WAA_re);
+  REPORT(WAA_a);
+  REPORT(WAA_repars);
 
   // ---------------------------------------------------------------------
   // Growth (length-at-age)
@@ -1438,7 +1479,7 @@ Type objective_function<Type>::operator() ()
 			nll += nll_waa.sum();	
 		} 
 		
-		// TODO: semiparametric approach
+		// TODO: WAA semiparametric approach
 		
   }
   REPORT(pred_waa);	

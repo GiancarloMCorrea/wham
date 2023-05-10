@@ -96,7 +96,7 @@ prepare_projection = function(model, proj.opts)
       #data$proj_GW_opt = numeric(length(model$env$data$growth_re_model))
       data$proj_LAA_opt <- ifelse(proj.opts$cont.LAA.re, 1, 2) 
   } else {
-    data$proj_LAA_opt <- ifelse(model$env$data$LAA_re_model %in% c(2,5), 1, 2)
+    data$proj_LAA_opt <- ifelse(model$env$data$LAA_re_model %in% c(2,5,6), 1, 2)
   }
   # add options for LW:
   #   1 = continue random effects (if they exist) - need to pad M_re
@@ -114,7 +114,7 @@ prepare_projection = function(model, proj.opts)
       #data$proj_GW_opt = numeric(length(model$env$data$growth_re_model))
       data$proj_WAA_opt <- ifelse(proj.opts$cont.WAA.re, 1, 2) 
   } else {
-    data$proj_WAA_opt <- ifelse(model$env$data$WAA_re_model %in% c(2,5), 1, 2)
+    data$proj_WAA_opt <- ifelse(model$env$data$WAA_re_model %in% c(2,5,6), 1, 2)
   }
   # check options for F/catch are valid
   if(any(proj.opts$avg.yrs %in% model$years == FALSE)) stop(paste("","** Error setting up projections: **",
