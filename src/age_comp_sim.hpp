@@ -329,62 +329,71 @@ vector<Type> sim_acomp(vector<Type> paa_pred, Type Neff, vector<int> ages, int a
 {
   int n_ages = ages.size();
   vector<Type> obs(n_ages);
-  vector<Type> p = paa_pred + 1.0e-15;
+  int n_true_ages = paa_pred.size();
+  vector<Type> obs_tmp(n_true_ages);
+  vector<Type> p = paa_pred;
   obs.setZero();
   if(age_comp_model == 1)
   {
-    obs = rmultinom(Neff, p);
+	// multinomial
+	p += 1.0e-15; //for log of any p = 0
+    obs_tmp = rmultinom(Neff, p);
     //obs = obs/obs.sum();// proportions
   }
   if(age_comp_model == 2) //dirichlet-multinomial. dirichlet generated from iid gammas and multinomial from uniform
   {
     //int N = CppAD::Integer(Neff);
     vector<Type> alpha = p * exp(age_comp_pars(0));
-    obs = rdirmultinom(Neff,alpha);
+    obs_tmp = rdirmultinom(Neff,alpha);
     //obs = obs/obs.sum();// proportions
   }
   if(age_comp_model == 3) { //Dirichlet, miss0
-    obs = rdirichlet(p, exp(age_comp_pars(0)), ages, 0); //0: miss0
+    obs_tmp = rdirichlet(p, exp(age_comp_pars(0)), ages, 0); //0: miss0
   }
   if(age_comp_model == 4) { //Dirichlet, pool0
-    obs = rdirichlet(p, exp(age_comp_pars(0)), ages, 1); //1: pool0
+    obs_tmp = rdirichlet(p, exp(age_comp_pars(0)), ages, 1); //1: pool0
   }
   if(age_comp_model == 5) { //logistic-normal, miss0
     age_comp_pars(0) -= 0.5*log(Neff); //an adjustment for interannual variation in sampling effort
-    obs = rmvnorm(p, age_comp_pars, ages, 1, 0, 0); //1,0,0: Sigma diagonal, additive transformation, missing 0s 
+    obs_tmp = rmvnorm(p, age_comp_pars, ages, 1, 0, 0); //1,0,0: Sigma diagonal, additive transformation, missing 0s 
   }
   if(age_comp_model == 6) { //logistic-normal, ar1 cor, miss0
     age_comp_pars(0) -= 0.5*log(Neff); //an adjustment for interannual variation in sampling effort
-    obs = rmvnorm(p, age_comp_pars, ages, 2, 0, 0); //2,0,0: Sigma AR1 cor, additive transformation, missing 0s 
+    obs_tmp = rmvnorm(p, age_comp_pars, ages, 2, 0, 0); //2,0,0: Sigma AR1 cor, additive transformation, missing 0s 
   }
   if(age_comp_model == 7) { //logistic-normal, pool0
     age_comp_pars(0) -= 0.5*log(Neff); //an adjustment for interannual variation in sampling effort
-    obs = rmvnorm(p, age_comp_pars, ages, 1, 0, 1); //1,0,1: Sigma diagonal, additive transformation, pooling 0s 
+    obs_tmp = rmvnorm(p, age_comp_pars, ages, 1, 0, 1); //1,0,1: Sigma diagonal, additive transformation, pooling 0s 
   }
   if(age_comp_model == 8) 
   {
     //zero-one inflated logistic normal. Inspired by zero-one inflated beta in Ospina and Ferrari (2012).
     //NO OSA available!
-    obs = rzinf_logisticnormal_1(p, age_comp_pars, ages);
+    obs_tmp = rzinf_logisticnormal_1(p, age_comp_pars, ages);
   }
   if(age_comp_model == 9) 
   {
     //zero-one inflated logistic normal where p0 is a function of binomial sample size. 2 parameters
     //NO OSA available!
-    obs = rzinf_logisticnormal_2(p, age_comp_pars, ages);
+    obs_tmp = rzinf_logisticnormal_2(p, age_comp_pars, ages);
   }
   if(age_comp_model == 10) 
   {
     //multivariate Tweedie. 2 parameters
-    obs = rmvtweedie(Neff, p, exp(age_comp_pars(0)), Type(1.0)+invlogit(age_comp_pars(1)));
+    obs_tmp = rmvtweedie(Neff, p, exp(age_comp_pars(0)), Type(1.0)+invlogit(age_comp_pars(1)));
   }
   if(age_comp_model == 11) //"linearized" dirichlet-multinomial. dirichlet generated from iid gammas and multinomial from uniform
   {
     //int N = CppAD::Integer(Neff);
     vector<Type> alpha = Neff * p * exp(age_comp_pars(0));
-    obs = rdirmultinom(Neff,alpha);
+    obs_tmp = rdirmultinom(Neff,alpha);
     //obs = obs/obs.sum();// proportions
   }
+  
+  // correction made when selectivity == 0 
+  // now replace obs:
+  for(int i = 0; i < n_ages; i++) obs(i) = obs_tmp(ages(i)-1);
+  
   return obs;
 }
 
@@ -394,10 +403,11 @@ vector<Type> sim_lcomp(vector<Type> paa_pred, Type Neff, int len_comp_model, vec
 {
   int n_lengths = paa_pred.size();
   vector<Type> obs(n_lengths);
-  vector<Type> p = paa_pred + 1.0e-15;
+  vector<Type> p = paa_pred;
   obs.setZero();
   if(len_comp_model == 1)
   {
+	p += 1.0e-15; //for log of any p = 0
     obs = rmultinom(Neff, p);
     //obs = obs/obs.sum();// proportions
   }
@@ -415,6 +425,8 @@ vector<Type> sim_lcomp(vector<Type> paa_pred, Type Neff, int len_comp_model, vec
     obs = rdirmultinom(Neff,alpha);
     //obs = obs/obs.sum();// proportions
   }
+  
+  // no need to do the correction as done in sim_acomp
   return obs;
 }
 

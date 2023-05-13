@@ -676,10 +676,15 @@ Type objective_function<Type>::operator() ()
   if(LAA_re_model > 1) // random effects on LAA (either nonparametric or semiparametric approach)
   {
 	  Type sigma_LAA = exp(LAA_repars(0)); // first RE parameter
-	  Type rho_LAA_a = rho_trans(LAA_repars(1));  // correlation over ages
-	  Type rho_LAA_y = rho_trans(LAA_repars(2));  // correlation over years
-	  Type rho_LAA_c = rho_trans(LAA_repars(3));  // correlation over cohorts
+	  // Correlations:
+	  Type rho_LAA_a = rho_trans(LAA_repars(1));
+	  Type rho_LAA_y = rho_trans(LAA_repars(2));  
+	  // Partial correlations:
+	  Type prho_LAA_a = LAA_repars(1);
+	  Type prho_LAA_y = LAA_repars(2);  
+	  Type prho_LAA_c = LAA_repars(3);	
 	  Type Sigma_LAA;
+	  
 	  if((LAA_re_model == 2) | (LAA_re_model == 5)) { // iid and 2DAR1
 		// likelihood of LAA deviations
 		  Sigma_LAA = pow(pow(sigma_LAA,2) / ((1-pow(rho_LAA_y,2))*(1-pow(rho_LAA_a,2))),0.5);
@@ -711,7 +716,7 @@ Type objective_function<Type>::operator() ()
 			  int total_n = (n_years_model + n_years_proj)*n_ages;
 			  Eigen::SparseMatrix<Type> Q_sparseG(total_n, total_n); // Precision matrix
 			  // Construct precision matrix here
-			  Q_sparseG = construct_Q(n_years_model, n_ages, ay3D_IndexG, rho_LAA_y, rho_LAA_a, rho_LAA_c, sigma_LAA, Var3D_ParamG);
+			  Q_sparseG = construct_Q(n_years_model, n_ages, ay3D_IndexG, prho_LAA_y, prho_LAA_a, prho_LAA_c, sigma_LAA, Var3D_ParamG);
 			  nll_LAA += GMRF(Q_sparseG)(LAA_re); 
 		  	SIMULATE if(simulate_state(6) == 1) if(sum(simulate_period) > 0) {
 				vector<Type> LAAre_tmp(LAA_re.cols()*LAA_re.rows()); // should be a vector
@@ -729,7 +734,9 @@ Type objective_function<Type>::operator() ()
 		ADREPORT(sigma_LAA);
 		ADREPORT(rho_LAA_a);
 		ADREPORT(rho_LAA_y);
-		ADREPORT(rho_LAA_c);
+		ADREPORT(prho_LAA_a);
+		ADREPORT(prho_LAA_y);
+		ADREPORT(prho_LAA_c);
 	}
 		  
   }
@@ -827,9 +834,13 @@ Type objective_function<Type>::operator() ()
 	{
 	  
 	  Type sigma_WAA = exp(WAA_repars(0)); // first RE parameter
+	  // Correlations:
 	  Type rho_WAA_a = rho_trans(WAA_repars(1));
-	  Type rho_WAA_y = rho_trans(WAA_repars(2));  // second RE parameter
-	  Type rho_WAA_c = rho_trans(WAA_repars(3));  // second RE parameter
+	  Type rho_WAA_y = rho_trans(WAA_repars(2));  
+	  // Partial correlations:
+	  Type prho_WAA_a = WAA_repars(1);
+	  Type prho_WAA_y = WAA_repars(2);  
+	  Type prho_WAA_c = WAA_repars(3);	  
 	  Type Sigma_WAA;
 
 	  if((WAA_re_model == 2) | (WAA_re_model == 5)) { // 
@@ -863,7 +874,7 @@ Type objective_function<Type>::operator() ()
 			  int total_n = (n_years_model + n_years_proj)*n_ages;
 			  Eigen::SparseMatrix<Type> Q_sparseW(total_n, total_n); // Precision matrix
 			  // Construct precision matrix here
-			  Q_sparseW = construct_Q(n_years_model, n_ages, ay3D_IndexW, rho_WAA_y, rho_WAA_a, rho_WAA_c, sigma_WAA, Var3D_ParamW);
+			  Q_sparseW = construct_Q(n_years_model, n_ages, ay3D_IndexW, prho_WAA_y, prho_WAA_a, prho_WAA_c, sigma_WAA, Var3D_ParamW);
 			  nll_WAA += GMRF(Q_sparseW)(WAA_re); 
 			  SIMULATE if(simulate_state(8) == 1) if(sum(simulate_period) > 0) {
 				vector<Type> WAAre_tmp(WAA_re.cols()*WAA_re.rows()); // should be a vector
@@ -880,7 +891,9 @@ Type objective_function<Type>::operator() ()
 			ADREPORT(sigma_WAA);
 			ADREPORT(rho_WAA_a);
 			ADREPORT(rho_WAA_y);
-			ADREPORT(rho_WAA_c);
+			ADREPORT(prho_WAA_a);
+			ADREPORT(prho_WAA_y);
+			ADREPORT(prho_WAA_c);
 		}
 			  
 	}
