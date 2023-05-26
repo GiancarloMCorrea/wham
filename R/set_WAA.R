@@ -97,8 +97,8 @@ set_WAA = function(input, waa_opts = NULL, WAA, LW)
     WAA_ini = log(WAA$WAA_vals)
     if(!is.null(WAA$est_pars)) data$WAA_est[WAA$est_pars] = 1
     if(!is.null(WAA$re))  {
-      if(!(WAA$re %in% c("none","iid","iid_a","ar1_a","2dar1","3dar1"))) stop("WAA$re must be one of the following: 'none','iid','iid_a','ar1_a','2dar1','3dar1'")
-      data$WAA_re_model <- match(WAA$re, c("none","iid","iid_a","ar1_a","2dar1","3dar1")) # Respect this order to create array later
+      if(!(WAA$re %in% c("none","iid","iid_a","ar1_a","2dar1","3dgmrf"))) stop("WAA$re must be one of the following: 'none','iid','iid_a','ar1_a','2dar1','3dgmrf'")
+      data$WAA_re_model <- match(WAA$re, c("none","iid","iid_a","ar1_a","2dar1","3dgmrf")) # Respect this order to create array later
     }
 
   }

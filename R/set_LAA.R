@@ -23,8 +23,8 @@ set_LAA = function(input, LAA, growth)
     if(!is.null(LAA$LAA_vals)) LAA_ini = log(LAA$LAA_vals)
     if(!is.null(LAA$est_pars)) data$LAA_est[LAA$est_pars] = 1
     if(!is.null(LAA$re))  {
-      if(!(LAA$re %in% c("none","iid","iid_a","ar1_a","2dar1","3dar1"))) stop("LAA$re must be one of the following: 'none','iid','iid_a','ar1_a','2dar1','3dar1'")
-      data$LAA_re_model <- match(LAA$re, c("none","iid","iid_a","ar1_a","2dar1","3dar1")) # Respect this order to create array later
+      if(!(LAA$re %in% c("none","iid","iid_a","ar1_a","2dar1","3dgmrf"))) stop("LAA$re must be one of the following: 'none','iid','iid_a','ar1_a','2dar1','3dgmrf'")
+      data$LAA_re_model <- match(LAA$re, c("none","iid","iid_a","ar1_a","2dar1","3dgmrf")) # Respect this order to create array later
     }
 
     if(!is.null(LAA$SD_vals)){

@@ -1,15 +1,19 @@
 template<class Type>
-vector<Type> rmultinom(Type N, vector<Type> p)
+vector<Type> rmultinom(Type N, vector<Type> p, vector<int> ages)
 {
   //multinomial
-  int dim = p.size();
+  int dim = ages.size();
   vector<Type> x(dim);
+  vector<Type> p_use(dim);
+  for(int i = 0; i < dim; i++) p_use(i) = p(ages(i)-1);
+  p_use /= sum(p_use);
+  
   int Nint = CppAD::Integer(N);
   x.setZero();
   for(int i = 0; i < Nint; i++)
   {
     Type y = runif(0.0,1.0);
-    for(int a = 0; a < dim; a++) if(y < p.head(a+1).sum())
+    for(int a = 0; a < dim; a++) if(y < p_use.head(a+1).sum())
     {
       x(a) += 1.0;
       break;
@@ -25,10 +29,10 @@ vector<Type> rdirichlet(vector<Type> alpha){
 }
 
 template<class Type>
-vector<Type> rdirmultinom(Type N, vector<Type> alpha) //dirichlet generated from iid gammas
+vector<Type> rdirmultinom(Type N, vector<Type> alpha, vector<int> ages) //dirichlet generated from iid gammas
 {
   vector<Type> dp = rdirichlet(alpha);
-  vector<Type> obs = rmultinom(N,dp);
+  vector<Type> obs = rmultinom(N,dp,ages);
   return(obs);
 }
 
@@ -96,7 +100,7 @@ vector<Type> rdirichlet(vector<Type> p, Type phi, vector<int> ages, int pool0)
     vector<Type> alpha_pos = p_pos * phi;
     obs = rdirichlet(alpha_pos);
   }
-  if(ages.size() == 1) obs(ages(0)) = 1.0;
+  if(ages.size() == 1) obs(ages(0)-1) = 1.0;
   return(obs);
 }
 
@@ -296,14 +300,14 @@ Type rTweedie( Type mu, Type phi, Type power){
 }
 
 template<class Type>
-vector<Type> rmvtweedie( Type N, vector<Type> p, Type phi, Type power)
+vector<Type> rmvtweedie( Type N, vector<Type> p, Type phi, Type power, vector<int> ages)
 {
-  int dim = p.size();
+  int dim = ages.size();
   vector<Type> obs(dim);
   //obs.setZero();
   for(int i = 0; i < dim; i++)
   {
-    obs(i) = rTweedie( N*p(i), phi, power );
+    obs(i) = rTweedie( N*p(ages(i)-1), phi, power );
   }
   return(obs);
 }
@@ -329,100 +333,95 @@ vector<Type> sim_acomp(vector<Type> paa_pred, Type Neff, vector<int> ages, int a
 {
   int n_ages = ages.size();
   vector<Type> obs(n_ages);
-  int n_true_ages = paa_pred.size();
-  vector<Type> obs_tmp(n_true_ages);
   vector<Type> p = paa_pred;
   obs.setZero();
   if(age_comp_model == 1)
   {
 	// multinomial
 	p += 1.0e-15; //for log of any p = 0
-    obs_tmp = rmultinom(Neff, p);
+    obs = rmultinom(Neff, p,ages);
     //obs = obs/obs.sum();// proportions
   }
   if(age_comp_model == 2) //dirichlet-multinomial. dirichlet generated from iid gammas and multinomial from uniform
   {
     //int N = CppAD::Integer(Neff);
     vector<Type> alpha = p * exp(age_comp_pars(0));
-    obs_tmp = rdirmultinom(Neff,alpha);
+    obs = rdirmultinom(Neff,alpha,ages);
     //obs = obs/obs.sum();// proportions
   }
   if(age_comp_model == 3) { //Dirichlet, miss0
-    obs_tmp = rdirichlet(p, exp(age_comp_pars(0)), ages, 0); //0: miss0
+    obs = rdirichlet(p, exp(age_comp_pars(0)), ages, 0); //0: miss0
   }
   if(age_comp_model == 4) { //Dirichlet, pool0
-    obs_tmp = rdirichlet(p, exp(age_comp_pars(0)), ages, 1); //1: pool0
+    obs = rdirichlet(p, exp(age_comp_pars(0)), ages, 1); //1: pool0
   }
   if(age_comp_model == 5) { //logistic-normal, miss0
     age_comp_pars(0) -= 0.5*log(Neff); //an adjustment for interannual variation in sampling effort
-    obs_tmp = rmvnorm(p, age_comp_pars, ages, 1, 0, 0); //1,0,0: Sigma diagonal, additive transformation, missing 0s 
+    obs = rmvnorm(p, age_comp_pars, ages, 1, 0, 0); //1,0,0: Sigma diagonal, additive transformation, missing 0s 
   }
   if(age_comp_model == 6) { //logistic-normal, ar1 cor, miss0
     age_comp_pars(0) -= 0.5*log(Neff); //an adjustment for interannual variation in sampling effort
-    obs_tmp = rmvnorm(p, age_comp_pars, ages, 2, 0, 0); //2,0,0: Sigma AR1 cor, additive transformation, missing 0s 
+    obs = rmvnorm(p, age_comp_pars, ages, 2, 0, 0); //2,0,0: Sigma AR1 cor, additive transformation, missing 0s 
   }
   if(age_comp_model == 7) { //logistic-normal, pool0
     age_comp_pars(0) -= 0.5*log(Neff); //an adjustment for interannual variation in sampling effort
-    obs_tmp = rmvnorm(p, age_comp_pars, ages, 1, 0, 1); //1,0,1: Sigma diagonal, additive transformation, pooling 0s 
+    obs = rmvnorm(p, age_comp_pars, ages, 1, 0, 1); //1,0,1: Sigma diagonal, additive transformation, pooling 0s 
   }
   if(age_comp_model == 8) 
   {
     //zero-one inflated logistic normal. Inspired by zero-one inflated beta in Ospina and Ferrari (2012).
     //NO OSA available!
-    obs_tmp = rzinf_logisticnormal_1(p, age_comp_pars, ages);
+    obs = rzinf_logisticnormal_1(p, age_comp_pars, ages);
   }
   if(age_comp_model == 9) 
   {
     //zero-one inflated logistic normal where p0 is a function of binomial sample size. 2 parameters
     //NO OSA available!
-    obs_tmp = rzinf_logisticnormal_2(p, age_comp_pars, ages);
+    obs = rzinf_logisticnormal_2(p, age_comp_pars, ages);
   }
   if(age_comp_model == 10) 
   {
     //multivariate Tweedie. 2 parameters
-    obs_tmp = rmvtweedie(Neff, p, exp(age_comp_pars(0)), Type(1.0)+invlogit(age_comp_pars(1)));
+    obs = rmvtweedie(Neff, p, exp(age_comp_pars(0)), Type(1.0)+invlogit(age_comp_pars(1)),ages);
   }
   if(age_comp_model == 11) //"linearized" dirichlet-multinomial. dirichlet generated from iid gammas and multinomial from uniform
   {
     //int N = CppAD::Integer(Neff);
     vector<Type> alpha = Neff * p * exp(age_comp_pars(0));
-    obs_tmp = rdirmultinom(Neff,alpha);
+    obs = rdirmultinom(Neff,alpha,ages);
     //obs = obs/obs.sum();// proportions
   }
-  
-  // correction made when selectivity == 0 
-  // now replace obs:
-  for(int i = 0; i < n_ages; i++) obs(i) = obs_tmp(ages(i)-1);
-  
   return obs;
 }
 
 // simulate lcomps
 template<class Type>
-vector<Type> sim_lcomp(vector<Type> paa_pred, Type Neff, int len_comp_model, vector<Type> len_comp_pars)
+vector<Type> sim_lcomp(vector<Type> pal_pred, Type NeffL, int len_comp_model, vector<Type> len_comp_pars)
 {
-  int n_lengths = paa_pred.size();
+  int n_lengths = pal_pred.size();
   vector<Type> obs(n_lengths);
-  vector<Type> p = paa_pred;
+  vector<Type> p = pal_pred;
+  vector<int> lens(n_lengths);
+  for(int i = 0; i < lens.size(); i++) lens(i) = i+1; // fake lengths to make it compatible with dmultinom made for ages
   obs.setZero();
   if(len_comp_model == 1)
   {
 	p += 1.0e-15; //for log of any p = 0
-    obs = rmultinom(Neff, p);
+    obs = rmultinom(NeffL, p,lens);
     //obs = obs/obs.sum();// proportions
   }
   if(len_comp_model == 2) //dirichlet-multinomial. dirichlet generated from iid gammas and multinomial from uniform
   {
-    //int N = CppAD::Integer(Neff);
+    //int N = CppAD::Integer(NeffL);
     vector<Type> alpha = p * exp(len_comp_pars(0));
-    obs = rdirmultinom(Neff,alpha);
+    obs = rdirmultinom(NeffL,alpha,lens);
     //obs = obs/obs.sum();// proportions
   }
   if(len_comp_model == 3) //"linearized" dirichlet-multinomial. dirichlet generated from iid gammas and multinomial from uniform
   {
-    //int N = CppAD::Integer(Neff);
-    vector<Type> alpha = Neff * p * exp(len_comp_pars(0));
-    obs = rdirmultinom(Neff,alpha);
+    //int N = CppAD::Integer(NeffL);
+    vector<Type> alpha = NeffL * p * exp(len_comp_pars(0));
+    obs = rdirmultinom(NeffL,alpha,lens);
     //obs = obs/obs.sum();// proportions
   }
   
