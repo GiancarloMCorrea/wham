@@ -86,7 +86,7 @@ set_indices = function(input, index_opts=NULL)
 		else data$index_pal[] = index_opts$index_pal
 
 		if(is.null(index_opts$index_caal)) data$index_caal[] = 1/data$n_ages
-		else data$index_caal[] = index_opts$index_caal
+		else data$index_caal = index_opts$index_caal
 
 		if(is.null(index_opts$units_index_paa)) data$units_index_paa = rep(2,data$n_indices) #numbers
 		else data$units_index_paa = index_opts$units_index_paa
@@ -103,16 +103,16 @@ set_indices = function(input, index_opts=NULL)
 		else data$index_NeffL[] = index_opts$index_NeffL
 		
 		if(is.null(index_opts$index_caal_Neff)) data$index_caal_Neff[] = 0
-		else data$index_caal_Neff[] = index_opts$index_caal_Neff
+		else data$index_caal_Neff = index_opts$index_caal_Neff
 
 		if(is.null(index_opts$index_aging_error)) data$index_aging_error[] = 0
 		else data$index_aging_error[] = index_opts$index_aging_error
 		
-		if(!is.null(index_opts$use_indices)) data$use_indices[] = index_opts$use_indices
-		if(!is.null(index_opts$use_index_paa)) data$use_index_paa[] = index_opts$use_index_paa
-		if(!is.null(index_opts$use_index_pal)) data$use_index_pal[] = index_opts$use_index_pal
-		if(!is.null(index_opts$use_index_caal)) data$use_index_caal[] = index_opts$use_index_caal
-		if(!is.null(index_opts$use_index_aging_error)) data$use_index_aging_error[] = index_opts$use_index_aging_error
+		if(!is.null(index_opts$use_indices)) data$use_indices = index_opts$use_indices
+		if(!is.null(index_opts$use_index_paa)) data$use_index_paa = index_opts$use_index_paa
+		if(!is.null(index_opts$use_index_pal)) data$use_index_pal = index_opts$use_index_pal
+		if(!is.null(index_opts$use_index_caal)) data$use_index_caal = index_opts$use_index_caal
+		if(!is.null(index_opts$use_index_aging_error)) data$use_index_aging_error = index_opts$use_index_aging_error
 
 	    if(is.null(index_opts$selblock_pointer_indices)) data$selblock_pointer_indices = matrix(rep(1:data$n_indices, each = data$n_years_model), data$n_years_model, data$n_indices) + data$n_fleets
 	    else data$selblock_pointer_indices = index_opts$selblock_pointer_indices
