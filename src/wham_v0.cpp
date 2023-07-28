@@ -887,14 +887,14 @@ Type objective_function<Type>::operator() ()
 			  }
 			}  
 	  }
-		if(do_post_samp.sum()==0){
-			ADREPORT(sigma_WAA);
-			ADREPORT(rho_WAA_a);
-			ADREPORT(rho_WAA_y);
-			ADREPORT(prho_WAA_a);
-			ADREPORT(prho_WAA_y);
-			ADREPORT(prho_WAA_c);
-		}
+	  if(do_post_samp.sum()==0){
+		ADREPORT(sigma_WAA);
+		ADREPORT(rho_WAA_a);
+		ADREPORT(rho_WAA_y);
+		ADREPORT(prho_WAA_a);
+		ADREPORT(prho_WAA_y);
+		ADREPORT(prho_WAA_c);
+	  }
 			  
 	}
   REPORT(nll_WAA);
