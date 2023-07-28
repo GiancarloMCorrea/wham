@@ -13,7 +13,7 @@ set_catch = function(input, catch_opts= NULL)
   }
   # print(data)
 
-	data$agg_catch = matrix(NA, data$n_years_model, data$n_fleets)
+  data$agg_catch = matrix(NA, data$n_years_model, data$n_fleets)
   data$fracyr_catch = rep(0.5, times = data$n_years_model)
   data$catch_paa = array(NA, dim = c(data$n_fleets, data$n_years_model, data$n_ages))
   # For agg_Catch and use_catch_paa is important to have 1 (testthat)
@@ -71,28 +71,28 @@ set_catch = function(input, catch_opts= NULL)
   	if(is.null(catch_opts$catch_pal)) data$catch_pal[] = 1/data$n_lengths
     else data$catch_pal[] = catch_opts$catch_pal
 	
-    if(is.null(catch_opts$catch_caal)) data$catch_caal[] = 1/data$n_ages
-    else data$catch_caal[] = catch_opts$catch_caal
+    if(is.null(catch_opts[['catch_caal']])) data[['catch_caal']][] = 1/data$n_ages
+    else data[['catch_caal']] = catch_opts[['catch_caal']]
 
 	  if(is.null(catch_opts$catch_cv)) data$agg_catch_sigma = matrix(sqrt(log(0.1^2 + 1)), data$n_years_model, data$n_fleets)
     else data$agg_catch_sigma = matrix(sqrt((log(catch_opts$catch_cv^2 + 1))), data$n_years_model, data$n_fleets)
 	  
-    if(is.null(catch_opts$catch_Neff)) data$catch_Neff[] = matrix(200, data$n_years_model, data$n_fleets)
-    else data$catch_Neff = catch_opts$catch_Neff
+    if(is.null(catch_opts[['catch_Neff']])) data[['catch_Neff']][] = matrix(200, data$n_years_model, data$n_fleets)
+    else data[['catch_Neff']] = catch_opts[['catch_Neff']]
 
-    if(is.null(catch_opts$catch_NeffL)) data$catch_NeffL[] = 0  
-    else data$catch_NeffL = catch_opts$catch_NeffL
+    if(is.null(catch_opts[['catch_NeffL']])) data[['catch_NeffL']] = 0  
+    else data[['catch_NeffL']] = catch_opts[['catch_NeffL']]
 
-    if(is.null(catch_opts$catch_caal_Neff)) data$catch_caal_Neff[] = 0
-    else data$catch_caal_Neff = catch_opts$catch_caal_Neff
+    if(is.null(catch_opts[['catch_caal_Neff']])) data[['catch_caal_Neff']][] = 0
+    else data[['catch_caal_Neff']] = catch_opts[['catch_caal_Neff']]
 
     if(is.null(catch_opts$catch_aging_error)) data$catch_aging_error[] = 0
     else data$catch_aging_error = catch_opts$catch_aging_error
 
-    if(!is.null(catch_opts$use_catch_paa)) data$use_catch_paa[] = catch_opts$use_catch_paa
-    if(!is.null(catch_opts$use_catch_pal)) data$use_catch_pal[] = catch_opts$use_catch_pal
-    if(!is.null(catch_opts$use_catch_caal)) data$use_catch_caal[] = catch_opts$use_catch_caal
-    if(!is.null(catch_opts$use_catch_aging_error)) data$use_catch_aging_error[] = catch_opts$use_catch_aging_error
+    if(!is.null(catch_opts$use_catch_paa)) data$use_catch_paa = catch_opts$use_catch_paa
+    if(!is.null(catch_opts$use_catch_pal)) data$use_catch_pal = catch_opts$use_catch_pal
+    if(!is.null(catch_opts$use_catch_caal)) data$use_catch_caal = catch_opts$use_catch_caal
+    if(!is.null(catch_opts$use_catch_aging_error)) data$use_catch_aging_error = catch_opts$use_catch_aging_error
     if(!is.null(catch_opts$use_agg_catch)) data$use_agg_catch = catch_opts$use_agg_catch
 
     for(i in 1:data$n_fleets) for(y in 1:data$n_years_model){ 

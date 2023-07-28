@@ -57,7 +57,9 @@ Type dmultinom(vector<Type> x, vector<Type> p, vector<int> ages, data_indicator<
         //logres += k(i)*dbinom(x(i),nUnused,p(i)/(Type(1)-pUsed),true);
         //cdf = pbinom(x(i),nUnused,p(i)/(Type(1)-pUsed));
         nUnused -= x(i);
-        pUsed += p_x(i);
+        //pUsed += p_x(i);
+		pUsed += p_x(i);
+		pUsed = squeeze(pUsed);
       }else{ // last index 
         logres += k(i)*Type(0);
         //cdf = Type(1);
