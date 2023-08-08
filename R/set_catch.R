@@ -80,7 +80,7 @@ set_catch = function(input, catch_opts= NULL)
     if(is.null(catch_opts[['catch_Neff']])) data[['catch_Neff']][] = matrix(200, data$n_years_model, data$n_fleets)
     else data[['catch_Neff']] = catch_opts[['catch_Neff']]
 
-    if(is.null(catch_opts[['catch_NeffL']])) data[['catch_NeffL']] = 0  
+    if(is.null(catch_opts[['catch_NeffL']])) data[['catch_NeffL']][] = 0  
     else data[['catch_NeffL']] = catch_opts[['catch_NeffL']]
 
     if(is.null(catch_opts[['catch_caal_Neff']])) data[['catch_caal_Neff']][] = 0
