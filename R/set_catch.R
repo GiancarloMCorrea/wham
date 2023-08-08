@@ -77,7 +77,7 @@ set_catch = function(input, catch_opts= NULL)
 	  if(is.null(catch_opts$catch_cv)) data$agg_catch_sigma = matrix(sqrt(log(0.1^2 + 1)), data$n_years_model, data$n_fleets)
     else data$agg_catch_sigma = matrix(sqrt((log(catch_opts$catch_cv^2 + 1))), data$n_years_model, data$n_fleets)
 	  
-    if(is.null(catch_opts[['catch_Neff']])) data[['catch_Neff']][] = matrix(200, data$n_years_model, data$n_fleets)
+    if(is.null(catch_opts[['catch_Neff']])) data[['catch_Neff']] = matrix(200, data$n_years_model, data$n_fleets)
     else data[['catch_Neff']] = catch_opts[['catch_Neff']]
 
     if(is.null(catch_opts[['catch_NeffL']])) data[['catch_NeffL']][] = 0  
