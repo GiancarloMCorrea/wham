@@ -1,3 +1,9 @@
+> **Note**
+> This is the WHAM branch that allows the inclusion of length information and modeling of time-varying growth.
+> Find more details in Correa et al. (2023): Modelling time-varying growth in state-space stock assessments. ICES Journal of Marine Sciences.
+> You can find examples in this repository (see vignettes). 
+> You can also find more examples and instructions [on this website](https://giancarlomcorrea.netlify.app/post/wham-tutorial/).
+
 # WHAM: a state-space age-structured assessment model
 
 The Woods Hole Assessment Model (WHAM) is a general state-space age-structured stock assessment framework designed to include environmental effects on population processes. The state-space framework is attractive because it can estimate observation and process error, as well as naturally propagate random effect parameters in stock projections. WHAM can be configured to estimate a range of assessment models (see [Ex 1](https://timjmiller.github.io/wham/articles/ex1_basics.html) and [Ex 6](https://timjmiller.github.io/wham/articles/ex6_NAA.html)):
