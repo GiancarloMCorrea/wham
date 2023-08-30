@@ -1,7 +1,10 @@
 > **Note**
 > This is the WHAM branch that allows the inclusion of length information and modeling of time-varying growth.
-> Find more details in Correa et al. (2023): Modelling time-varying growth in state-space stock assessments. ICES Journal of Marine Sciences.
+> <br>
+> Find more details in **Correa et al. (2023)**: Modelling time-varying growth in state-space stock assessments. *ICES Journal of Marine Sciences*. doi: 10.1093/icesjms/fsad133.
+> <br>
 > You can find examples in this repository (see vignettes). 
+> <br>
 > You can also find more examples and instructions [on this website](https://giancarlomcorrea.netlify.app/post/wham-tutorial/).
 
 # WHAM: a state-space age-structured assessment model
