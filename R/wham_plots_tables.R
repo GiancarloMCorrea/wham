@@ -2366,7 +2366,7 @@ plot.fleet.sel.blocks <- function(mod, ages, ages.lab, plot.colors, do.tex = FAL
 	  blocks = unique(sb_p[,i])
 		n.blocks <- length(blocks)
     # sel = rbind(mod$rep$selblocks[blocks,])
-    if(all(dat$selblock_models[blocks] <= 4)) {
+    if(all(dat$selblock_models[blocks] <= 5)) {
       sel = do.call(rbind, lapply(mod$rep$selAA, function(x) apply(x,2,mean)))[blocks,,drop=FALSE]
       bin = ages
       xLab  = 'Age'
@@ -2426,7 +2426,7 @@ plot.index.sel.blocks <- function(mod, ages, ages.lab, plot.colors, do.tex = FAL
 	  blocks = unique(sb_p[,i])
 		n.blocks <- length(blocks)
     # sel = rbind(mod$rep$selblocks[blocks,])
-    if(all(dat$selblock_models[blocks] <= 4)) {
+    if(all(dat$selblock_models[blocks] <= 5)) {
       sel = do.call(rbind, lapply(mod$rep$selAA, function(x) apply(x,2,mean)))[blocks,,drop=FALSE]
       bin = ages
       xLab  = 'Age'
