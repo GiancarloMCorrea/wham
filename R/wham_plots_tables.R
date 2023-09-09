@@ -2574,7 +2574,7 @@ plot.SSB.F.trend<-function(mod, alpha = 0.05)
   	grid(col = gray(0.7))
   	polygon(c(years_full,rev(years_full)), c(f.ci[,1],rev(f.ci[,2])), col = tcol, border = tcol, lwd = 1)
   } else { # CI all NA
-    ymax <- max(full.f[,1][which(!is.na(full.f[,1]) & !is.infinite(full.f[,1]))])
+    ymax <- max(full.f[which(!is.na(full.f) & !is.infinite(full.f))])
     plot(years_full, full.f, type='l', lwd=2, col='black', xlab="", ylab="", ylim=c(0,ymax), axes = FALSE)
     axis(1)
     axis(2)
