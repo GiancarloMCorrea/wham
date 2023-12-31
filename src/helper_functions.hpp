@@ -62,7 +62,7 @@ vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, ve
             for (int a = 0; a < n_ages; a++)
             {
               age += 1.0;
-     	        tmp(y,a) = 1.0/(1.0 + exp(-(age - a50_1)/k_1));
+     	      tmp(y,a) = 1.0/(1.0 + exp(-(age - a50_1)/k_1));
               tmp(y,a) *= 1.0/(1.0 + exp((age - a50_2)/k_2)); //1-p
             }
           }
@@ -1185,27 +1185,160 @@ matrix<Type> sim_pop(array<Type> NAA_devs, int recruit_model, vector<Type> mean_
   return(out);
 }
 
-// calculate mean length-at-age at any fraction of year
+// plogis CDF, assuming location (mu) = 0 and scale (sigma) = 1:
 template <class Type>
-array<Type> pred_LAA(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vector<Type> SD_len,
-					  array<Type> GW_par, vector<Type> lengths, vector<Type> fracyr_vec, 
-					  int is_parametric, int is_nonparametric, int growth_model, Type age_L1){
+Type plogis(Type x)
+{
+	return 1.0/(1.0+exp(-(x-0)/1));
+}
 
+// construct phi matrix for a single year
+template <class Type>
+matrix<Type> construct_phi_matrix(vector<Type> lengths, vector<Type> mLAA, vector<Type> SDatA)
+{
+	
   Type Lminp = min(lengths);
   Type Lmaxp = max(lengths);
   Type len_bin = lengths(1) - lengths(0); 
+  int n_lengths = lengths.size();
+  int n_ages = mLAA.size();
   Type Fac1 = 0.0;
   Type Fac2 = 0.0;
   Type Ll1p = 0.0;
   Type Llp = 0.0;
+  matrix<Type> phiMat(n_lengths, n_ages);
+  
+	for(int a = 0; a < n_ages; a++) {
+		for(int l = 0; l < n_lengths; l++) {
+		
+			if(l == 0) { 
+				Fac1 = (Lminp + len_bin - mLAA(a))/SDatA(a); // upper limit smallest len bin, important colsums = 0
+				phiMat(l,a) = pnorm(Fac1);  // ORIGINAL: pnorm  
+				//if(phiMat(l,a) < 1e-4) phiMat(l,a) = 0.0;
+			} else {
+				if(l == (n_lengths-1)) { 
+					Fac1 = (Lmaxp - mLAA(a))/SDatA(a);
+					phiMat(l,a) = 1.0 - pnorm(Fac1);  // ORIGINAL: pnorm 
+					//if(phiMat(l,a) < 1e-4) phiMat(l,a) = 0.0;
+				} else { 
+					Ll1p = lengths(l+1);
+					Llp = lengths(l);
+					Fac1 = (Ll1p - mLAA(a))/SDatA(a);
+					Fac2 = (Llp - mLAA(a))/SDatA(a);
+					phiMat(l,a) = pnorm(Fac1) - pnorm(Fac2);  // ORIGINAL: pnorm 
+					//if(phiMat(l,a) < 1e-4) phiMat(l,a) = 0.0;
+				}
+			}
+		} // length loop
+	} // age loop
+	
+	return(phiMat);
+}
+
+// calculate mean length at age at the start of the year for parametric approach:
+template <class Type>
+matrix<Type> calculate_LAA_par(array<Type> GWpars, int n_ages,
+						int n_years_model, int n_years_proj, 
+						vector<Type> lengths, int growth_model, 
+						Type age_L1, int age_L1_ceil)
+{
+	Type Lminp = min(lengths);
+	Type b_len = 0.0;
+	matrix<Type> outLAA(n_years_model+n_years_proj, n_ages);
+	Type last_linear = 0.0;
+	Type current_size = 0.0;
+	Type temp = 0.0;
+	Type temp1 = 0.0;
+	Type temp2 = exp(-0.2);
+	Type temp3 = 0.0;
+	Type temp4 = 0.0;
+	Type div_age = 0.0;
+	for(int y = 0; y < n_years_model + n_years_proj; y++)
+	{
+	  for(int a = 0; a < n_ages; a++) {
+
+		if(growth_model == 1) { // parametric: vB classic growth model
+			b_len = (GWpars(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
+			if(y == 0) { //year = 0
+				if((a + 1.0) <= age_L1) { // linear growth
+					outLAA(y,a) = Lminp + b_len*(a+1.0);
+				} else { // use growth equation
+					outLAA(y,a) = GWpars(y,a,1) + (GWpars(y,a,2) - GWpars(y,a,1)) * exp(-GWpars(y,a,0)*(a+1.0-age_L1)); 
+				}
+			} else { // year > 0
+				if((a + 1.0) < age_L1) { // linear growth
+					outLAA(y,a) = Lminp + b_len*(a+1.0); 
+				} else { // use growth equation
+					if((a+1) == age_L1_ceil) { // linear growth + growth equation
+						last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
+						outLAA(y,a) = last_linear + (last_linear - GWpars(y,a,1))*(exp(-GWpars(y,a,0)*(a+1.0-age_L1)) - 1.0); // use growth parameters y
+					} else { // only growth curve
+						outLAA(y,a) = outLAA(y-1,a-1) + (outLAA(y-1,a-1) - GWpars(y-1,a-1,1))*(exp(-GWpars(y-1,a-1,0)) - 1.0);// use growth parameters y-1 and a-1 because it is jan1
+					}
+				}
+			}
+		}			
+		
+		if(growth_model == 2) { // parametric: Richards growth model
+			b_len = (GWpars(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
+			if(y == 0) { //year = 0
+				if((a + 1.0) <= age_L1) { // linear growth
+					outLAA(y,a) = Lminp + b_len*(a+1.0);
+				} else { // use growth equation
+					outLAA(y,a) = pow(pow(GWpars(y,a,1),GWpars(y,a,3)) + (pow(GWpars(y,a,2),GWpars(y,a,3)) - pow(GWpars(y,a,1),GWpars(y,a,3))) * exp(-GWpars(y,a,0)*(a+1.0-age_L1)),1/GWpars(y,a,3)); 
+				}
+			} else { // year > 0
+				if((a + 1.0) < age_L1) { // linear growth
+					outLAA(y,a) = Lminp + b_len*(a+1.0); 
+				} else { // use growth equation
+					if((a+1) == age_L1_ceil) { // linear growth + growth equation
+						last_linear = Lminp + b_len*age_L1; // last age (cont) with linear growth 
+						outLAA(y,a) = pow(pow(last_linear,GWpars(y,a,3)) + (pow(last_linear,GWpars(y,a,3)) - pow(GWpars(y,a,1),GWpars(y,a,3)))*(exp(-GWpars(y,a,0)*(a+1.0-age_L1)) - 1.0),1/GWpars(y,a,3)); // use growth parameters y 
+					} else { // only growth curve
+						outLAA(y,a) = pow(pow(outLAA(y-1,a-1),GWpars(y-1,a-1,3)) + (pow(outLAA(y-1,a-1),GWpars(y-1,a-1,3)) - pow(GWpars(y-1,a-1,1),GWpars(y-1,a-1,3)))*(exp(-GWpars(y-1,a-1,0)) - 1.0),1/GWpars(y-1,a-1,3));
+					}
+				}
+			}
+		}
+		
+		// correction for oldest age (as in SS)
+		if(a == (n_ages-1)) {
+			current_size = outLAA(y,a);
+			temp = 0.0;
+			temp1 = 0.0;
+			temp3 = GWpars(y,a,1) - current_size;
+			temp4 = 1.0;
+			for(int a = 0; a <= n_ages; a++) {
+				div_age = (a+0.0)/(n_ages+0.0);
+				temp += temp4*(current_size + div_age*temp3);
+				temp1 += temp4;
+				temp4 *= temp2;
+			}
+			outLAA(y,a) = temp/temp1; // oldest age
+		}
+		
+	  } // age loop
+	} // year loop
+
+	return(outLAA);
+}
+
+
+// calculate mean length-at-age at any fraction of year
+template <class Type>
+array<Type> fryr_phi_matrix(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vector<Type> SD_len,
+					  array<Type> GW_par, vector<Type> lengths, vector<Type> fracyr_vec, 
+					  int is_parametric, int is_nonparametric, int growth_model, Type age_L1){
+
+  Type Lminp = min(lengths);
   int n_ages = mLAA_jan1.cols();
   int n_lengths = lengths.size();
-  array<Type> out(n_yrs, n_lengths, n_ages);
+  array<Type> out(n_lengths, n_ages, n_yrs);
   vector<Type> mLAA(n_ages);
   Type Grate = 0.0;
   Type b_len = 0.0;
   Type last_linear = 0.0;
-  Type this_SD = 0.0;
+  vector<Type> SDatA(n_ages);
   Type Slope = 0.0;
 
 	for(int y = 0; y < n_yrs; y++) {
@@ -1260,43 +1393,36 @@ array<Type> pred_LAA(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vecto
 			
 			// SD calculation (again): 
 			if(is_parametric == 1) { // for parametric and semiparametric approach
+				// SD at age as function of mean LAA:
 				if((a + 1.0 + fracyr) <= age_L1) { // same as SD1
-					this_SD = SD_len(0); 
+					SDatA(a) = SD_len(0); 
 				} else { 
 					if(a == (n_ages-1)) { // same as SDA
-						this_SD = SD_len(1);
+						SDatA(a) = SD_len(1);
 					} else { // linear interpolation
 						Slope = (SD_len(1) - SD_len(0))/(GW_par(y,a,1)-GW_par(y,a,2));
-						this_SD = SD_len(0) + Slope*(mLAA(a)-GW_par(y,a,2));  
-					}
-				}				
-			}
-			if((is_nonparametric == 1) & (is_parametric == 0)) { // only for nonparametric approach
-				Slope = (SD_len(1) - SD_len(0))/(mLAA_jan1(y,n_ages-1)-mLAA_jan1(y,0));
-				this_SD = SD_len(0) + Slope*(mLAA(a)-mLAA_jan1(y,0));  
-			}
-
-			// construct age-length transition matrix:
-			for(int l = 0; l < n_lengths; l++) {
-				
-				if(l == 0) { 
-					Fac1 = (Lminp + len_bin - mLAA(a))/this_SD; // upper limit smallest len bin, important colsums = 0
-					out(y,l,a) = pnorm(Fac1);  
-				} else {
-					if(l == (n_lengths-1)) { 
-						Fac1 = (Lmaxp - mLAA(a))/this_SD;
-						out(y,l,a) = 1.0 - pnorm(Fac1);  
-					} else { 
-						Ll1p = lengths(l+1);
-						Llp = lengths(l);
-						Fac1 = (Ll1p - mLAA(a))/this_SD;
-						Fac2 = (Llp - mLAA(a))/this_SD;
-						out(y,l,a) = pnorm(Fac1) - pnorm(Fac2);  
+						SDatA(a) = SD_len(0) + Slope*(mLAA(a)-GW_par(y,a,2));  
 					}
 				}
+				// SD at age as function of age:
+				// Slope = (SD_len(1) - SD_len(0))/(n_ages-1.0);
+				// SDatA(a) = SD_len(0) + Slope*(a);  				
 			}
-		  }
-	}
+			if((is_nonparametric == 1) & (is_parametric == 0)) { // only for nonparametric approach
+				// SD at age as function of mean LAA:
+				Slope = (SD_len(1) - SD_len(0))/(mLAA_jan1(y,n_ages-1)-mLAA_jan1(y,0));
+				SDatA(a) = SD_len(0) + Slope*(mLAA(a)-mLAA_jan1(y,0));  
+				// SD at age as function of age:
+				// Slope = (SD_len(1) - SD_len(0))/(n_ages-1.0);
+				// SDatA(a) = SD_len(0) + Slope*(a);  
+			}
+
+		  } // age loop
+
+		  // fill the phi_matrix:
+		  out.col(y) = construct_phi_matrix(lengths, mLAA, SDatA);
+
+	} // year loop
 	
   return(out);
 }
@@ -1328,21 +1454,22 @@ template <class Type>
 vector<Type> get_selAA_from_selAL(matrix<Type> selAL, int y, int this_sel_model, array<Type> fracyr_phi_mat){
 	  
 	  vector<int> dims = fracyr_phi_mat.dim;
-	  int n_ages = dims(2);
-	  int n_lengths = dims(1);
+	  int n_ages = dims(1);
 	  vector<Type> selAA(n_ages); // n_ages
+	  
 	  if(this_sel_model < 6) { // for age models
 		  selAA = selAL.row(y);  // same as calculated in selAL
 	  } else { // transform for all years
-		  for(int a = 0; a < n_ages; a++) {
-		  Type sumSelex = 0.0;
-			  for(int l = 0; l < n_lengths; l++) {
-				sumSelex += fracyr_phi_mat(y,l,a)*selAL(y,l);
-			  }
-		  selAA(a) = sumSelex;
-		  }
+	      // Setting Eigen::SparseMatrix to phi_mat does not help here.
+	  	  matrix<Type> tmp_phi_mat = fracyr_phi_mat.col(y).matrix();
+		  matrix<Type> Tphi_mat = tmp_phi_mat.transpose();
+		  //Eigen::SparseMatrix<Type> sp_phi_mat=asSparseMatrix(Tphi_mat);
+		  vector<Type> sel_vec = selAL.row(y);
+		  //Eigen::SparseVector<Type> sel_vec = selAL.row(y);
+		  selAA = Tphi_mat*sel_vec; // matrix*vector product, R: %*%
 	  }
-	return(selAA);
+	  
+	  return(selAA);
 }
 
 // 3D smoother. Author: Cheng et al. (in review)
