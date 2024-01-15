@@ -4994,7 +4994,7 @@ plot.tile.age.year <- function(mod, type="selAA", do.tex = FALSE, do.png = FALSE
   # transition matrix
   if(type=="phi_mat"){ 
     yearLab = years[1]
-    df.LAA <- t(rep$phi_mat[,,1]) # only for first year
+    df.LAA <- t(rep$jan1_phi_mat[,,1]) # only for first year
 
     if(do.tex) cairo_pdf(file.path(od, paste0("phi_mat_tile.pdf")), family = fontfam, height = 5, width = 10)
     if(do.png) png(filename = file.path(od, paste0("phi_mat_tile.png")), width = 8*res, height = 5*res, res = res, pointsize = 12, family = fontfam)
