@@ -1240,7 +1240,7 @@ template <class Type>
 matrix<Type> calculate_LAA_par(array<Type> GWpars, int n_ages,
 						int n_years_model, int n_years_proj, 
 						vector<Type> lengths, int growth_model, 
-						Type age_L1, int age_L1_ceil)
+						Type age_L1, int age_L1_ceil, vector<Type> fix_GW_pars)
 {
 	Type Lminp = min(lengths);
 	Type b_len = 0.0;
@@ -1258,14 +1258,15 @@ matrix<Type> calculate_LAA_par(array<Type> GWpars, int n_ages,
 	  for(int a = 0; a < n_ages; a++) {
 
 		if(growth_model == 1) { // parametric: vB classic growth model
-			b_len = (GWpars(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
 			if(y == 0) { //year = 0
+				b_len = (fix_GW_pars(2) - Lminp)/age_L1; // Slope from Lmin to L1
 				if((a + 1.0) <= age_L1) { // linear growth
 					outLAA(y,a) = Lminp + b_len*(a+1.0);
-				} else { // use growth equation
-					outLAA(y,a) = GWpars(y,a,1) + (GWpars(y,a,2) - GWpars(y,a,1)) * exp(-GWpars(y,a,0)*(a+1.0-age_L1)); 
+				} else { // use growth equation (use fixed effects for y = 0
+					outLAA(y,a) = fix_GW_pars(1) + (fix_GW_pars(2) - fix_GW_pars(1)) * exp(-fix_GW_pars(0)*(a+1.0-age_L1)); 
 				}
 			} else { // year > 0
+				b_len = (GWpars(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
 				if((a + 1.0) < age_L1) { // linear growth
 					outLAA(y,a) = Lminp + b_len*(a+1.0); 
 				} else { // use growth equation
@@ -1280,14 +1281,15 @@ matrix<Type> calculate_LAA_par(array<Type> GWpars, int n_ages,
 		}			
 		
 		if(growth_model == 2) { // parametric: Richards growth model
-			b_len = (GWpars(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
 			if(y == 0) { //year = 0
+				b_len = (fix_GW_pars(2) - Lminp)/age_L1; // Slope from Lmin to L1
 				if((a + 1.0) <= age_L1) { // linear growth
 					outLAA(y,a) = Lminp + b_len*(a+1.0);
-				} else { // use growth equation
-					outLAA(y,a) = pow(pow(GWpars(y,a,1),GWpars(y,a,3)) + (pow(GWpars(y,a,2),GWpars(y,a,3)) - pow(GWpars(y,a,1),GWpars(y,a,3))) * exp(-GWpars(y,a,0)*(a+1.0-age_L1)),1/GWpars(y,a,3)); 
+				} else { // use growth equation (use fixed effects for y = 0)
+					outLAA(y,a) = pow(pow(fix_GW_pars(1),fix_GW_pars(3)) + (pow(fix_GW_pars(2),fix_GW_pars(3)) - pow(fix_GW_pars(1),fix_GW_pars(3))) * exp(-fix_GW_pars(0)*(a+1.0-age_L1)),1/fix_GW_pars(3)); 
 				}
 			} else { // year > 0
+				b_len = (GWpars(y,a,2) - Lminp)/age_L1; // Slope from Lmin to L1
 				if((a + 1.0) < age_L1) { // linear growth
 					outLAA(y,a) = Lminp + b_len*(a+1.0); 
 				} else { // use growth equation

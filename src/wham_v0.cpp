@@ -1109,7 +1109,9 @@ Type objective_function<Type>::operator() ()
 	// Calculate mean length-at-age at the start of the year:
 	
 	// 1) Parametric and semiparametric approach:
-	if(isG_parametric == 1) LAA = calculate_LAA_par(GW_par, n_ages, n_years_model, n_years_proj, lengths, growth_model, age_L1, age_L1_ceil); 
+	vector<Type> fix_GW_pars(n_growth_par);
+	for(int j = 0; j < n_growth_par; j++) fix_GW_pars(j) = exp(growth_a(j,0));
+	if(isG_parametric == 1) LAA = calculate_LAA_par(GW_par, n_ages, n_years_model, n_years_proj, lengths, growth_model, age_L1, age_L1_ceil, fix_GW_pars); 
 	// 2) Nonparametric approach:
 	if((isG_nonparametric == 1) & (isG_parametric == 0)) LAA = LAA_nonpar; 
 
@@ -1168,7 +1170,7 @@ Type objective_function<Type>::operator() ()
 		for(int j = 0; j < n_growth_par; j++) {
 			for(int y = 0; y < n_years_model + n_years_proj; y++) for(int a = 0; a < n_ages; a++) GW_fix_par(y,a,j) = exp(growth_a(j,0));
 		}
-		fix_LAA = calculate_LAA_par(GW_fix_par, n_ages, n_years_model, n_years_proj, lengths, growth_model, age_L1, age_L1_ceil); 
+		fix_LAA = calculate_LAA_par(GW_fix_par, n_ages, n_years_model, n_years_proj, lengths, growth_model, age_L1, age_L1_ceil, fix_GW_pars); 
 	}
 	if((isG_nonparametric == 1) & (isG_parametric == 0)) {
 		for(int y = 0; y < n_years_model + n_years_proj; y++) fix_LAA.row(y) = exp(LAA_a); // nonparametric approach
