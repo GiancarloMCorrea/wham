@@ -1,5 +1,7 @@
 > **Note**
-> This is the WHAM branch that allows the inclusion of length information and modeling of time-varying growth.
+> This is the WHAM branch with some useful features to implement stock assessment models for tuna stocks.
+> <br>
+> This branch was forked from the *growth* branch.
 > <br>
 > Find more details in **Correa et al. (2023)**: Modelling time-varying growth in state-space stock assessments. *ICES Journal of Marine Sciences*. doi: 10.1093/icesjms/fsad133.
 > <br>
