@@ -1430,7 +1430,7 @@ array<Type> fryr_phi_matrix(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model
 }
 
 template <class Type>
-matrix<Type> get_fracyr_WAA(vector<Type> WAA_jan1, vector<Type> WAA_jan1_y1, Type fracyr){
+vector<Type> get_fracyr_WAA(vector<Type> WAA_jan1, vector<Type> WAA_jan1_y1, Type fracyr){
   int n_ages = WAA_jan1.size();
   vector<Type> WAA(n_ages);
   Type Grate = 0.0;

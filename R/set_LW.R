@@ -12,7 +12,7 @@ set_LW = function(input, LW)
   data$n_LW_par = n_par_def # 
   data$LW_est <- rep(0, times = n_par_def) # default 
   data$isW_parametric = 0L # default
-  LW_re_ini = array(0, dim = c(data$n_years_model, data$n_ages, n_par_def))
+  LW_re_ini = array(0, dim = c(data$n_years_model, n_par_def))
   LW_ini = c(log(5e-06), log(3)) 
 
   # prepare LW options:
@@ -25,19 +25,19 @@ set_LW = function(input, LW)
       
       if(length(LW$re) != data$n_LW_par) stop("Number of 're' must be equal to the number of L-W parameters.")
       for(k in 1:data$n_LW_par) {
-          if(!(LW$re[k] %in% c("none","iid_y","iid_c","ar1_y","ar1_c"))) stop(paste0("LW$re[", k, "] must be one of the following: 'none','iid_y','iid_c','ar1_y','ar1_c'"))
-          data$LW_re_model[k] <- match(LW$re[k], c("none","iid_y","iid_c","ar1_y","ar1_c")) # Respect this order to create array later
+          if(!(LW$re[k] %in% c("none","iid","ar1"))) stop(paste0("LW$re[", k, "] must be one of the following: 'none', 'iid', or 'ar1'"))
+          data$LW_re_model[k] <- match(LW$re[k], c("none","iid","ar1")) # Respect this order to create array later
       }
       
     }
 
     if(!is.null(LW$init_vals)){
-      if(length(LW$init_vals) != data$n_LW_par) stop("Length(LW$init_vals) must be 2.")
+      if(length(LW$init_vals) != data$n_LW_par) stop(paste0("length(LW$init_vals) must be ", n_par_def, "."))
       LW_ini <- log(LW$init_vals)
     }
   
     if(!is.null(LW$est_pars)){
-        if(length(LW$est_pars) > data$n_LW_par) stop("LW$est_pars should contain values equal or less than 2.")
+        if(length(LW$est_pars) > data$n_LW_par) stop(paste0("LW$est_pars should contain values equal or less than ", n_par_def, "."))
         data$LW_est[LW$est_pars] = 1
     }
 
@@ -70,37 +70,21 @@ set_LW = function(input, LW)
   this_max = 0
   for(i in 1:data$n_LW_par) {
 
-    # LW_re: "none","iid","ar1_y"
-    tmp1 <- matrix(NA, nrow = data$n_years_model, ncol = data$n_ages)
-    if(data$LW_re_model[i] %in% c(2,4)){ # iid ar1- only y
-      tmp1[] = rep(1:nrow(tmp1), times = ncol(tmp1))  # all y estimated
+    # LW_re: "none","iid","ar1"
+    tmp1 <- rep(NA, times = data$n_years_model)
+    if(data$LW_re_model[i] %in% c(2,3)){ # iid ar1- only y
+      tmp1 = 1:length(tmp1) # all y estimated
       active_sum = active_sum + 1
       max_val_par = max_val_par + this_max * min(1, active_sum)
       this_max = max(tmp1, na.rm = TRUE)
     }
-    if(data$LW_re_model[i] %in% c(3,5)){ # iid ar1 - only c
-      loop_row = rep(0, times = ncol(tmp1) + nrow(tmp1) - 1)
-      loop_row[1:ncol(tmp1)] = (ncol(tmp1) - 1):0
-      loop_col = rep(ncol(tmp1) - 1, times = ncol(tmp1) + nrow(tmp1) - 1)
-      loop_col[(length(loop_col) - ncol(tmp1) + 1):length(loop_col)] = (ncol(tmp1) - 1):0
-
-      for(j in seq_along(loop_col)) {
-        tmp1[(loop_row[j]:loop_col[j])*(nrow(tmp1) + 1) + (j - ncol(tmp1) + 1)] <- j
-      }
-
-      active_sum = active_sum + 1
-      max_val_par = max_val_par + this_max * min(1, active_sum)
-      this_max = max(tmp1, na.rm = TRUE)
-    }
-
-    map$LW_re <- c(map$LW_re, as.vector(tmp1) + max_val_par)
+    
+    map$LW_re <- c(map$LW_re, tmp1 + max_val_par)
 
     # K_repars: sigma_M, rho_M_y
     if(data$LW_re_model[i] == 1) tmp.g.repars[i,] <- rep(NA,n_re_par) # no RE pars to estimate
     if(data$LW_re_model[i] == 2) tmp.g.repars[i,] <- c(1,NA) # estimate sigma y
-    if(data$LW_re_model[i] == 3) tmp.g.repars[i,] <- c(1,NA) # estimate sigma c
-    if(data$LW_re_model[i] == 4) tmp.g.repars[i,] <- c(1,2) # ar1_y: estimate sigma y, rho_y
-    if(data$LW_re_model[i] == 5) tmp.g.repars[i,] <- c(1,2) # ar1_c: estimate sigma c, rho_c
+    if(data$LW_re_model[i] == 3) tmp.g.repars[i,] <- c(1,2) # estimate sigma and rho
 
   }
 

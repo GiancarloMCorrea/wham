@@ -428,8 +428,8 @@
 #' }
 #'
 #' @export
-prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock", recruit_model=2, ecov=NULL, selectivity=NULL, 
-	growth=NULL, LAA = NULL, LW = NULL, WAA = NULL, M=NULL, NAA_re=NULL, catchability=NULL, age_comp=NULL, len_comp = NULL, basic_info = NULL){
+prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock", recruit_model=2, ecov=NULL, selectivity=NULL,  
+	growth=NULL, LAA = NULL, maturity = NULL, LW = NULL, WAA = NULL, M=NULL, NAA_re=NULL, catchability=NULL, age_comp=NULL, len_comp = NULL, basic_info = NULL){
 
 	data = list()
 	par = list()
@@ -531,6 +531,10 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 
 	# LW: parametric approach
 	input = set_LW(input, LW)
+	#print("LW")
+	
+	# maturity: parametric 
+	input = set_maturity(input, basic_info, maturity)
 	#print("LW")
 
 	# WAA nonparametric approach or EWAA
