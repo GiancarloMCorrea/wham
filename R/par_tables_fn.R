@@ -558,7 +558,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
     }
 
   # LW parameters
-    # parametric:
+  # parametric:
   if(data$isW_parametric == 1) {
     LW_vector = as.vector(pars$LW_a)
     LWpar_names = c("a (length-weight)", "b (length-weight)")
@@ -599,15 +599,15 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       }
     
       if(data$LAA_re_model > 1) {
-        fe.names = c(fe.names, "LAA RE $\\sigma$")
+        fe.names = c(fe.names, "WAA RE $\\sigma$")
         fe.vals = c(fe.vals, exp(pars$LAA_repars[1]))
         fe.cis = rbind(fe.cis, ci(pars$LAA_repars[1], sd$LAA_repars[1], type = "exp"))
         if(data$LAA_re_model%in%c(4,5)){
-          fe.names = c(fe.names, "LAA RE $\\rho$ (age)")
+          fe.names = c(fe.names, "WAA RE $\\rho$ (age)")
           fe.vals = c(fe.vals, exp(pars$LAA_repars[2]))
           fe.cis = rbind(fe.cis, ci(pars$LAA_repars[2], sd$LAA_repars[2], type = "exp"))
           if(data$LAA_re_model == c(5)){
-            fe.names = c(fe.names, "LAA RE $\\rho$ (year)")
+            fe.names = c(fe.names, "WAA RE $\\rho$ (year)")
             fe.vals = c(fe.vals, exp(pars$LAA_repars[3]))
             fe.cis = rbind(fe.cis, ci(pars$LAA_repars[3], pars$LAA_repars[3], lo = -1, hi = 1, type = "expit", k = 2))
           }
