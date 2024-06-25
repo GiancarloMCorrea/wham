@@ -1259,57 +1259,74 @@ Type objective_function<Type>::operator() ()
   }
   
   // --------------------------------------------------------------------------
-  // Weight and Maturity calculations:
-  // These objects will be used exclusively for SSB calculation
-  // Reference points still use mat_at_age and wt_at_age for all cases 
+  // Weight at age calculations:
+  // Exclusively for LW parametric approach and used for SSB calculations
   matrix<Type> wt_at_age(n_years_model + n_years_proj, n_ages);
   matrix<Type> wt_at_len(n_years_model + n_years_proj, n_lengths);
-  matrix<Type> mat_at_age(n_years_model + n_years_proj, n_ages);
-  matrix<Type> mat_at_len(n_years_model + n_years_proj, n_lengths);
-  // Define some variables:
+  wt_at_len.setZero();
+  Type sum_wt_ssb = 0;
   Type lenmid = (lengths(1) - lengths(0))*0.5;
-  // Initialize at 1:
-  for(int y = 0; y < n_years_model + n_years_proj; y++) for(int a = 0; a < n_ages; a++) wt_at_age(y,a) = 1.0;
-  for(int y = 0; y < n_years_model + n_years_proj; y++) for(int a = 0; a < n_ages; a++) mat_at_age(y,a) = 1.0;
-  for(int y = 0; y < n_years_model + n_years_proj; y++) for(int l = 0; l < n_lengths; l++) wt_at_len(y,l) = 1.0;
-  for(int y = 0; y < n_years_model + n_years_proj; y++) for(int l = 0; l < n_lengths; l++) mat_at_len(y,l) = 1.0;
-  // Now replace values based on the chosen option:
+
   // weight (parametric approach):
   if((isW_parametric == 1) & (isW_nonparametric == 0)) {
-	for(int y = 0; y < n_years_model + n_years_proj; y++)  for(int l = 0; l < n_lengths; l++) wt_at_len(y,l) = LW_par(y,0)*pow((lengths(l)+lenmid), LW_par(y,1));
-  }
-  // weight (nonparametric approach):
-  if((isW_nonparametric == 1) & (isW_parametric == 0)) {
-	for(int y = 0; y < n_years_model + n_years_proj; y++) {
-		int yuse = y;
-		int y_1 = y + 1;
-		if(y > n_years_model - 1) yuse = n_years_model -1; //some things only go up to n_years_model-1
-		if(y == (n_years_model + n_years_proj - 1)) y_1 = y;
-		wt_at_age.row(y) = get_fracyr_WAA(vector<Type>(WAA_nonpar.row(y)), vector<Type>(WAA_nonpar.row(y_1)), fracyr_SSB(yuse));
+	// First calculate weight at length:
+	for(int y = 0; y < n_years_model + n_years_proj; y++)  {
+		for(int l = 0; l < n_lengths; l++) {
+			wt_at_len(y,l) = LW_par(y,0)*pow((lengths(l)+lenmid), LW_par(y,1));
+		}
+	}  
+	// Then calculate weight at age:
+	out_phi_mat = phi_matrix(waa_pointer_ssb-1);
+	for(int y = 0; y < n_years_model + n_years_proj; y++)  {
+		for(int a = 0; a < n_ages; a++) {
+			sum_wt_ssb = 0;
+			for(int l = 0; l < n_lengths; l++) {
+				sum_wt_ssb += out_phi_mat(l,a,y)*wt_at_len(y,l);
+			}
+			wt_at_age(y,a) = sum_wt_ssb;
+		}
 	}
   }
-  // weight (EWAA approach):
-  if(isW_ewaa == 1) {
-	for(int y = 0; y < n_years_model + n_years_proj; y++) for(int a = 0; a < n_ages; a++) wt_at_age(y,a) = waa(waa_pointer_ssb - 1,y,a);
-  }
-  // maturity (parametric approach):
-  if(isMat_parametric == 1) {
-	if(mat_model == 1) { // mat_model == 1 (age-specific)
-		for(int y = 0; y < n_years_model + n_years_proj; y++)  for(int a = 0; a < n_ages; a++) mat_at_age(y,a) = 1/(1+exp(-mat_par(y,0)*((a+1) - mat_par(y,1))));
-	}
-	if(mat_model == 2) { // mat_model == 2 (length-specific)
-		for(int y = 0; y < n_years_model + n_years_proj; y++)  for(int l = 0; l < n_lengths; l++) mat_at_len(y,l) = 1/(1+exp(-mat_par(y,0)*((lengths(l)+lenmid) - mat_par(y,1))));
-	}
-  }
-  // maturity (as data input):
-  if(isMat_parametric == 0) {
+  REPORT(wt_at_len);
+  
+  // --------------------------------------------------------------------------
+  // Calculate maturity at age regardless the chosen method: 
+  // Used in SSB calculations  
+  matrix<Type> mat_at_age(n_years_model + n_years_proj, n_ages);
+  matrix<Type> mat_at_len(n_years_model + n_years_proj, n_lengths);
+  mat_at_len.setZero();
+  Type sum_mat = 0;
+  
+  if(isMat_parametric == 0) { 
 	mat_at_age = mature; // same as data input
   }
+  if((isMat_parametric == 1) & (mat_model == 1)) { // age-logistic parametric approach
+	for(int y = 0; y < n_years_model + n_years_proj; y++)  for(int a = 0; a < n_ages; a++) mat_at_age(y,a) = 1/(1+exp(-mat_par(y,0)*((a+1) - mat_par(y,1))));
+  }
+  if((isMat_parametric == 1) & (mat_model == 2)) { // len-logistic parametric approach
+	// First calculate maturity at length:
+	for(int y = 0; y < n_years_model + n_years_proj; y++)  {
+		for(int l = 0; l < n_lengths; l++) {
+			mat_at_len(y,l) = 1/(1+exp(-mat_par(y,0)*((lengths(l)+lenmid) - mat_par(y,1))));
+		}
+	}
+	// Then calculate maturity at age:
+	out_phi_mat = phi_matrix(waa_pointer_ssb-1);
+	for(int y = 0; y < n_years_model + n_years_proj; y++)  {
+		for(int a = 0; a < n_ages; a++) {
+			sum_mat = 0;
+			for(int l = 0; l < n_lengths; l++) {
+				sum_mat += out_phi_mat(l,a,y)*mat_at_len(y,l);
+			}
+			mat_at_age(y,a) = sum_mat;
+		}
+	}
+  } 
+  REPORT(mat_at_len);
 
   // --------------------------------------------------------------------------
   // Weight at age calculations:
 	Type sum_wt = 0;
-	Type sum_wt_ssb = 0;
 	Type sum_wt_fleet = 0;
 	Type sum_wt_index = 0;
 	vector<Type> t_pred_waa(n_ages);
@@ -1347,14 +1364,9 @@ Type objective_function<Type>::operator() ()
 				}
 			  }
 				// For SSB
-			  out_phi_mat = phi_matrix(waa_pointer_ssb-1);
 			  for(int y = 0; y < n_years_model + n_years_proj; y++) { // 
 				for(int a = 0; a < n_ages; a++) { 
-					sum_wt_ssb = 0;
-					for(int l = 0; l < n_lengths; l++) {
-						sum_wt_ssb += out_phi_mat(l,a,y)*wt_at_len(y,l);
-					}
-					pred_waa(waa_pointer_ssb - 1,y,a) = sum_wt_ssb; // SSB
+					pred_waa(waa_pointer_ssb - 1,y,a) = wt_at_age(y,a); // SSB
 				}
 			  }
 			  
@@ -1443,9 +1455,10 @@ Type objective_function<Type>::operator() ()
 					pred_waa(waa_pointer_jan1 - 1,y,a) = WAA_nonpar(y,a); // jan-1st
 				}
 				// For SSB
+				fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_nonpar.row(y)), vector<Type>(WAA_nonpar.row(y_1)), fracyr_SSB(yuse));
 				for(int a = 0; a < n_ages; a++) { 
-					pred_waa(waa_pointer_ssb - 1,y,a) = wt_at_age(y,a); // SSB
-				}
+					pred_waa(waa_pointer_ssb - 1,y,a) = fracyr_WAA(a); // SSB
+				}	
 				// For fleets
 				for(int f = 0; f < n_fleets; f++) {
 					fracyr_WAA = get_fracyr_WAA(vector<Type>(WAA_nonpar.row(y)), vector<Type>(WAA_nonpar.row(y_1)), fracyr_catch(yuse));
@@ -1505,11 +1518,8 @@ Type objective_function<Type>::operator() ()
 
 			}
 			nll += nll_waa.sum();	
-		} 
-		
-		// TODO: WAA semiparametric approach
-		
-  }
+		} // if nonparametric approach 		
+  } // else isW_ewaa
   REPORT(pred_waa);	
   REPORT(nll_waa);
   if(do_post_samp.sum()==0) if((isW_nonparametric == 1) | (isW_parametric == 1)) ADREPORT(pred_waa); // If smoothing the WAA matrix get SEs
@@ -1807,7 +1817,6 @@ Type objective_function<Type>::operator() ()
   NAA.setZero();
   matrix<Type> pred_NAA(n_years_model + n_years_proj,n_ages);
   pred_NAA.setZero();
-  //Type fec_age = 0;
   ssb_phi_mat = phi_matrix(waa_pointer_ssb-1);
   
   for(int a = 0; a < n_ages; a++)
@@ -1822,15 +1831,8 @@ Type objective_function<Type>::operator() ()
         else NAA(0,a) = NAA(0,a-1)* exp(-MAA(0,a) -  exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1));
       }
     }
-    // Calculate SSB using mature (at age) or mature_len
-	//if((weight_model == 1) | (weight_model == 3)) { // use age information
-		SSB(0) += NAA(0,a) * pred_waa(waa_pointer_ssb-1,0,a) * mature(0,a) * exp(-ZAA(0,a)*fracyr_SSB(0)); // not use mature_len because these weight_models ignore length information
-	//}
-	//if(weight_model == 2) { // use len information (as in SS)
-	//	fec_age = 0;
-	//	for(int l = 0; l < n_lengths; l++) fec_age += ssb_phi_mat(0,l,a)*watl(0,l)*mature_len(0,l)*mature(0,a); // multiply by mat at len and age because both could be specified by the use when weight_model =2 
-	//	SSB(0) += NAA(0,a) * fec_age * exp(-ZAA(0,a)*fracyr_SSB(0));
-	//}
+    // Calculate SSB using maturity at age:
+	SSB(0) += NAA(0,a) * pred_waa(waa_pointer_ssb-1,0,a) * mat_at_age(0,a) * exp(-ZAA(0,a)*fracyr_SSB(0)); 
     pred_NAA(0,a) = NAA(0,a);
   }
 
@@ -1845,7 +1847,7 @@ Type objective_function<Type>::operator() ()
     {
       M(a) = MAA(y,a);
       waassb(a) = pred_waa(waa_pointer_ssb-1,y,a);
-      mat(a) = mature(y,a);
+      mat(a) = mat_at_age(y,a);
     }
     log_SPR0(y) = log(get_SPR_0(M, mat, waassb, fracyr_SSB(y)));
   }
@@ -1977,18 +1979,18 @@ Type objective_function<Type>::operator() ()
 		waacatch = get_waacatch_y(pred_waa, y, n_ages, waa_pointer_fleets);
 		waassb = get_waa_y(pred_waa, y, n_ages, waa_pointer_ssb);
         //n_fleets x n_ages: projected full F is sum of (means across years at age) across fleets 
-        matrix<Type> FAA_proj = get_F_proj(y, n_fleets, proj_F_opt, FAA, NAA, MAA, mature, waacatch, waassb, fracyr_SSB, 
+        matrix<Type> FAA_proj = get_F_proj(y, n_fleets, proj_F_opt, FAA, NAA, MAA, mat_at_age, waacatch, waassb, fracyr_SSB, 
           log_SPR0, avg_years_ind, n_years_model, which_F_age, percentSPR, proj_Fcatch, percentFXSPR, F_proj_init(y-n_years_model), 
           log_SR_a, log_SR_b, recruit_model, percentFMSY);
         FAA_tot.row(y) = FAA_proj.colwise().sum();
         for(int f = 0; f < n_fleets; f++) for(int a = 0; a < n_ages; a++) FAA(y,f,a) = FAA_proj(f,a);
-        //FAA_tot.row(y) = get_F_proj(y, proj_F_opt, FAA_tot, NAA, MAA, mature, waacatch, waassb, fracyr_SSB, log_SPR0, avg_years_ind, n_years_model,
+        //FAA_tot.row(y) = get_F_proj(y, proj_F_opt, FAA_tot, NAA, MAA, mat_at_age, waacatch, waassb, fracyr_SSB, log_SPR0, avg_years_ind, n_years_model,
         // which_F_age, percentSPR, proj_Fcatch);
         ZAA.row(y) = FAA_tot.row(y) + MAA.row(y);
       }
     } // end proj F
 	// Calculate SSB:
-	SSB(y) = get_SSB(NAA,ZAA,pred_waa,mature,y,waa_pointer_ssb,fracyr_SSB);
+	SSB(y) = get_SSB(NAA,ZAA,pred_waa,mat_at_age,y,waa_pointer_ssb,fracyr_SSB);
   } // end pop model loop
 
   // --------------------------------------------------------------------------
@@ -2062,7 +2064,7 @@ Type objective_function<Type>::operator() ()
   	out_phi_mat = phi_matrix(waa_pointer_ssb-1);
 	matrix<Type> sims = sim_pop(NAA_devs, recruit_model, mean_rec_pars, SSB,
 	  NAA, log_SR_a, log_SR_b, Ecov_where, Ecov_how, Ecov_lm, 
-      n_NAA_sigma, do_proj, proj_F_opt, FAA, FAA_tot, MAA, mature, pred_waa, waa_pointer_totcatch, waa_pointer_ssb, fracyr_SSB, log_SPR0, 
+      n_NAA_sigma, do_proj, proj_F_opt, FAA, FAA_tot, MAA, mat_at_age, pred_waa, waa_pointer_totcatch, waa_pointer_ssb, fracyr_SSB, log_SPR0, 
       avg_years_ind, n_years_model, n_fleets, which_F_age, percentSPR, proj_Fcatch, percentFXSPR, F_proj_init, percentFMSY);
     SSB = sims.col(sims.cols()-1);
     for(int a = 0; a < n_ages; a++) 
@@ -2594,7 +2596,7 @@ Type objective_function<Type>::operator() ()
     vector<Type> predR_toavg = XSPR_R_avg_yrs.unaryExpr(pred_NAA.col(0));
     predR.fill(predR_toavg.mean());
   }
-  matrix<Type> SPR_res = get_SPR_res(MAA, FAA, which_F_age, pred_waa, waa_pointer_ssb, waa_pointer_fleets, mature, percentSPR, predR, fracyr_SSB, log_SPR0, FXSPR_init);
+  matrix<Type> SPR_res = get_SPR_res(MAA, FAA, which_F_age, pred_waa, waa_pointer_ssb, waa_pointer_fleets, mat_at_age, percentSPR, predR, fracyr_SSB, log_SPR0, FXSPR_init);
   vector<Type> log_FXSPR = SPR_res.col(0);
   vector<Type> log_SSB_FXSPR = SPR_res.col(1);
   vector<Type> log_Y_FXSPR = SPR_res.col(2);
@@ -2615,7 +2617,7 @@ Type objective_function<Type>::operator() ()
   }
 
   //static/avg year results
-  vector<Type> SPR_res_static = get_static_SPR_res(MAA, FAA, which_F_age_static, pred_waa, waa_pointer_ssb, waa_pointer_fleets, mature, percentSPR, NAA, 
+  vector<Type> SPR_res_static = get_static_SPR_res(MAA, FAA, which_F_age_static, pred_waa, waa_pointer_ssb, waa_pointer_fleets, mat_at_age, percentSPR, NAA, 
     fracyr_SSB, static_FXSPR_init, avg_years_ind, avg_years_ind, avg_years_ind, avg_years_ind, avg_years_ind, XSPR_R_avg_yrs);
   Type log_FXSPR_static = SPR_res_static(0);
   Type log_SSB_FXSPR_static = SPR_res_static(1);
@@ -2656,7 +2658,7 @@ Type objective_function<Type>::operator() ()
         sel(a) = FAA_tot(y,a)/FAA_tot(y,which_F_age(y)-1); //have to look at FAA_tot to see where max F is.
         waassb(a) = pred_waa(waa_pointer_ssb-1,y,a);
         waacatch_MSY(a) = pred_waa(waa_pointer_totcatch-1, y, a);
-        mat(a) = mature(y,a);
+        mat(a) = mat_at_age(y,a);
       }
       SR_a = exp(log_SR_a(y));
       SR_b = exp(log_SR_b(y));
@@ -2740,10 +2742,7 @@ Type objective_function<Type>::operator() ()
   // REPORT(phi_matrix);
   REPORT(ssb_phi_mat);
   REPORT(catch_phi_mat);
-  REPORT(wt_at_len); // only used for SSB
-  REPORT(wt_at_age); // only used for SSB
-  REPORT(mat_at_len); // only used for SSB
-  REPORT(mat_at_age); // only used for SSB
+  REPORT(mat_at_age); 
   REPORT(selLL);
   REPORT(MAA);
   REPORT(F);

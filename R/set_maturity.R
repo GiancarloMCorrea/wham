@@ -4,31 +4,25 @@ set_maturity = function(input, basic_info, maturity)
   par = input$par
   map = input$map
   data$isMat_parametric = 0L # input data default
-  
-  # STOP if none is provided
-  if(is.null(basic_info[["maturity"]]) & is.null(maturity)) stop("You should provide maturity either as data input or a parametric function.")
-  # STOP if both are provided
-  if(!is.null(basic_info[["maturity"]]) & !is.null(maturity)) stop("You should provide maturity either as data input or a parametric function.")
-  
+
   # Maturity as data input --------------------------------------------------
-  data$mature = t(matrix(1/(1 + exp(-1*(1:data$n_ages - data$n_ages/2))), data$n_ages, length(input$years)))
+  data$mature = t(matrix(1, data$n_ages, length(input$years)))
   if(!is.null(basic_info[["maturity"]])){
     if(!(length(basic_info[["maturity"]]) %in% c(1,data$n_ages*length(input$years)))) stop("basic_info$maturity has been specified, but its length is not 1 or length(ages)*length(years)")
     else data$mature[] = basic_info[["maturity"]]
   }
   
-
   # Maturity as parametric function -----------------------------------------
   
   n_re_par = 2 # number of parameters for RE
 
   # maturity default options:
-  n_par_def = 2 # 2 parameters: Omega3 and Omega4: M = 1/(1+exp(-Omega3*(l-Omega4)))
+  n_par_def = 2 # 2 parameters: Omega3 and Omega4: Mat = 1/(1+exp(-Omega3*(l-Omega4)))
   data$mat_re_model = rep(1, times = n_par_def) # default = no RE / 'none'
   data$n_mat_par = n_par_def # 
   data$mat_est <- rep(0, times = n_par_def) # default 
   mat_re_ini = array(0, dim = c(data$n_years_model, n_par_def))
-  mat_ini = c(log(2), log(data$n_ages*0.5)) # age-logistic default (Omega3 and Omega4)
+  mat_ini = c(log(1), log(data$n_ages*0.5)) # age-logistic default (Omega3 and Omega4)
   data$mat_model = 1 # age-logistic default
   
   # prepare maturity options:
@@ -40,7 +34,7 @@ set_maturity = function(input, basic_info, maturity)
     # Change initial values if len-specific:
     if(!is.null(maturity$model)) {
       if(maturity$model == 'len-logistic') { 
-        mat_ini = c(log(1), log(max(data$lengths)*0.5))
+        mat_ini = c(log(2), log(max(data$lengths)*0.5)) # Length logistic default
         data$mat_model = 2
       }
     }
@@ -67,6 +61,9 @@ set_maturity = function(input, basic_info, maturity)
 
   }
   data$n_mat_est <- sum(data$mat_est)
+
+  # STOP if maturity as input and age-based maturity are provided
+  if(!is.null(basic_info[["maturity"]]) & (data$isMat_parametric) & (data$mat_model == 1)) stop("Maturity as data input and age-logistic cannot be specified simultaneously.")
 
   # maturity pars --------------------------
   
