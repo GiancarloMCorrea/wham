@@ -25,7 +25,7 @@ set_indices = function(input, index_opts=NULL)
 	data$agg_index_sigma = matrix(NA, data$n_years_model, data$n_indices)
 	data$index_paa = array(NA, dim = c(data$n_indices, data$n_years_model, data$n_ages))
 	data$index_pal = array(NA, dim = c(data$n_indices, data$n_years_model, data$n_lengths))
-	data$use_index_paa = matrix(1, data$n_years_model, data$n_indices) # 1 is important for testthat
+	data$use_index_paa = matrix(0, data$n_years_model, data$n_indices) # 1 is important for testthat
 	data$use_index_pal = matrix(0, data$n_years_model, data$n_indices)
 	data$index_Neff = matrix(0, data$n_years_model, data$n_indices)
 	data$index_NeffL = matrix(0, data$n_years_model, data$n_indices)
