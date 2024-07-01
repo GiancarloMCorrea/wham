@@ -28,11 +28,11 @@ add_basic_info <- function(input, basic_info){
 		if(!is.integer(basic_info$Fbar_ages)) stop("basic_info$Fbar_ages has been specified, but it is not an integer vector")
 		else input$data$Fbar_ages = basic_info$Fbar_ages
 	}
-	# For growth:
+	# For LAA:
 	input$data$age_L1 = 1
 	if(!is.null(basic_info$age_L1)) input$data$age_L1 = basic_info$age_L1 # assuming age = 1 at L1
   	if(input$data$age_L1 < 1) stop("'age_L1' cannot be younger than 1")
-  	input$data$age_L1_ceil = as.integer(ceiling(input$data$age_L1)) # very important for parametric growth.
+  	input$data$age_L1_ceil = as.integer(ceiling(input$data$age_L1)) # very important for parametric LAA.
 
 	return(input)
 }

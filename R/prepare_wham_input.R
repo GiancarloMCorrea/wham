@@ -429,7 +429,7 @@
 #'
 #' @export
 prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock", recruit_model=2, ecov=NULL, selectivity=NULL,  
-	growth=NULL, LAA = NULL, maturity = NULL, LW = NULL, WAA = NULL, M=NULL, NAA_re=NULL, catchability=NULL, age_comp=NULL, len_comp = NULL, basic_info = NULL){
+	LAA = NULL, maturity = NULL, WAA = NULL, M=NULL, NAA_re=NULL, catchability=NULL, age_comp=NULL, len_comp = NULL, basic_info = NULL){
 
 	data = list()
 	par = list()
@@ -522,24 +522,18 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 	#print("selectivity")
 
 	# Growth (parametric approach)
-	input = set_growth(input, growth)
+	# input = set_growth(input, growth)
 
-	# LAA non parametric (always after the set_growth function)
-	input = set_LAA(input, LAA, growth)
+	# LAA approach
+	input = set_LAA(input, LAA)
 
-	if(!is.null(LW) & !is.null(WAA)) stop("Semiparametric approach for weight-at-age not implemented yet. Please provide either LW or WAA.")
-
-	# LW: parametric approach
-	input = set_LW(input, LW)
-	#print("LW")
+	# WAA nonparametric approach or EWAA
+	input = set_WAA(input, waa_opts, WAA)
+	#print("WAA")
 	
 	# maturity: parametric 
 	input = set_maturity(input, basic_info, maturity)
 	#print("LW")
-
-	# WAA nonparametric approach or EWAA
-	input = set_WAA(input, waa_opts, WAA, LW)
-	#print("WAA")
 
 	# Age composition model
 	input = set_age_comp(input, age_comp)
@@ -566,7 +560,7 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 	#print("osa_obs")
 
 	# projection data will always be modified by 'prepare_projection'
-	input = set_proj(input, proj.opts = NULL) #proj options are used later after model fit, right?
+	input = set_proj(input, proj.opts = NULL) 
 	#print("proj")
 
 	#set any parameters as random effects
@@ -600,8 +594,8 @@ initial_input_fn = function(input, basic_info){
 
   input$data$bias_correct_pe = 1 #bias correct log-normal process errors?
   input$data$bias_correct_oe = 1 #bias correct log-normal observation errors?
-  input$data$simulate_state = rep(1L, times = 9) #simulate state variables (NAA, M, sel, Ecov, q, growth, LAA, LW, WAA)
-  input$data$simulate_data = rep(1L, times = 3) #simulate data types (catch, indices, Ecov)
+  input$data$simulate_state = rep(1L, times = 8) # simulate state variables (NAA, M, sel, Ecov, q, LAA, WAA, maturity)
+  input$data$simulate_data = rep(1L, times = 3) # simulate data types (catch, indices, Ecov)
   input$data$simulate_period = rep(1L, times = 2) #simulate above items for (model years, projection years)
   input$data$percentSPR = 40 #percentage of unfished SSB/R to use for SPR-based reference points
   input$data$percentFXSPR = 100 # percent of F_XSPR to use for calculating catch in projections

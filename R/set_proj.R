@@ -10,11 +10,9 @@ set_proj = function(input, proj.opts = NULL)
 	  data$proj_F_opt <- 0
 	  data$proj_Fcatch <- 0
 	  data$proj_M_opt <- 0
-	  data$proj_growth_opt <- rep(0, times = data$n_growth_par)
-	  data$proj_LAA_opt <- 0
-	  data$proj_LW_opt <- rep(0, times = data$n_LW_par)
+	  data$proj_LAA_opt <- rep(0, times = data$n_LAA_dim)
+	  data$proj_WAA_opt <- rep(0, times = data$n_WAA_dim)
 	  data$proj_mat_opt <- rep(0, times = data$n_mat_par)
-	  data$proj_WAA_opt <- 0
 	  data$logR_mean <- 0 # only used for SCAA projections
 	  data$logR_sd <- 0 # only used for SCAA projections
 	  data$FXSPR_init = rep(0.1, data$n_years_model + data$n_years_proj)

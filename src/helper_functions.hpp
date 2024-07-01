@@ -1237,7 +1237,7 @@ matrix<Type> construct_phi_matrix(vector<Type> lengths, vector<Type> mLAA, vecto
 
 // calculate mean length at age at the start of the year for parametric approach:
 template <class Type>
-matrix<Type> calculate_LAA_par(array<Type> GWpars, int n_ages,
+matrix<Type> calculate_jan1LAA(array<Type> GWpars, int n_ages,
 						int n_years_model, int n_years_proj, 
 						vector<Type> lengths, int growth_model, 
 						Type age_L1, int age_L1_ceil, vector<Type> fix_GW_pars)
@@ -1330,7 +1330,7 @@ matrix<Type> calculate_LAA_par(array<Type> GWpars, int n_ages,
 template <class Type>
 array<Type> fryr_phi_matrix(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model, vector<Type> SD_len,
 					  array<Type> GW_par, vector<Type> lengths, vector<Type> fracyr_vec, 
-					  int is_parametric, int is_nonparametric, int growth_model, Type age_L1){
+					  int growth_model, Type age_L1){
 
   Type Lminp = min(lengths);
   int n_ages = mLAA_jan1.cols();
@@ -1353,7 +1353,6 @@ array<Type> fryr_phi_matrix(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model
 		  for(int a = 0; a < n_ages; a++)
 		  {  
 			// mean length-at-age calculation
-			if((is_parametric == 1)  & (is_nonparametric == 0)) { // only for parametric approach
 				if(growth_model == 1) { // classic von Bertalanffy curve
 					b_len = (GW_par(y,a,2) - Lminp)/age_L1;
 					if((a + 1.0 + fracyr) <= age_L1) { // use linear growth
@@ -1382,9 +1381,8 @@ array<Type> fryr_phi_matrix(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model
 						}
 					}
 				}
-			}
 			
-			if(is_nonparametric == 1) { // nonparametric and semiparametric approach
+			if(growth_model == 3) { // nonparametric and semiparametric approach
 				if(a < (n_ages-1)) { // for a < n_ages - 1, linear interpolation
 					Grate = (mLAA_jan1(y_1,a+1) - mLAA_jan1(y,a))*fracyr;
 					mLAA(a) = mLAA_jan1(y,a) + Grate;	
@@ -1394,7 +1392,7 @@ array<Type> fryr_phi_matrix(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model
 			}
 			
 			// SD calculation (again): 
-			if(is_parametric == 1) { // for parametric and semiparametric approach
+			if((growth_model == 1)|(growth_model == 2)) { // for parametric and semiparametric approach
 				// SD at age as function of mean LAA:
 				if((a + 1.0 + fracyr) <= age_L1) { // same as SD1
 					SDatA(a) = SD_len(0); 
@@ -1410,7 +1408,7 @@ array<Type> fryr_phi_matrix(matrix<Type> mLAA_jan1, int n_yrs, int n_years_model
 				// Slope = (SD_len(1) - SD_len(0))/(n_ages-1.0);
 				// SDatA(a) = SD_len(0) + Slope*(a);  				
 			}
-			if((is_nonparametric == 1) & (is_parametric == 0)) { // only for nonparametric approach
+			if(growth_model == 3) { // only for nonparametric approach
 				// SD at age as function of mean LAA:
 				Slope = (SD_len(1) - SD_len(0))/(mLAA_jan1(y,n_ages-1)-mLAA_jan1(y,0));
 				SDatA(a) = SD_len(0) + Slope*(mLAA(a)-mLAA_jan1(y,0));  

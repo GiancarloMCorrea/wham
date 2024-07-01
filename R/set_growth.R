@@ -7,7 +7,7 @@ set_growth = function(input, growth)
   n_re_par = 2 # number of parameters for RE
 
   # growth default options:
-  n_par_def = 3 # 5 parameters (default): K, Linf, L1
+  n_par_def = 3 # 3 parameters (default): K, Linf, L1
   data$growth_model = 1 # 0: nonparametric, parametric: 1: vB-classic, 2: Richards
   data$growth_re_model = rep(1, times = n_par_def) # default = no RE / 'none'
   data$growth_est <- rep(0, times = n_par_def) # default = don't estimate growth parameters

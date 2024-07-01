@@ -67,7 +67,7 @@ set_maturity = function(input, basic_info, maturity)
 
   # maturity pars --------------------------
   
-  par$mat_a = as.matrix(mat_ini)
+  par$mat_a = mat_ini
   par$mat_re = mat_re_ini
   par$mat_repars = matrix(0, ncol = n_re_par, nrow = data$n_mat_par)
   par$mat_repars[,1] = log(0.1) # start sigma at 0.1, rho at 0
