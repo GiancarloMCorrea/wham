@@ -85,8 +85,8 @@ set_LAA = function(input, LAA)
   
   #data$n_LAA_est <- sum(data$LAA_est)
   # This section only used for 3D smoother (Nonparametric):
-  data$ay3D_IndexG = as.matrix(expand.grid("age" = seq_len(data$n_ages), "year" = seq_len(data$n_years_model) ))
-  if(is.null(data$Var3D_ParamG)) data$Var3D_ParamG = 0 # Var_Param == 0 Conditional, == 1 Marginal
+  data$ay3D_IndexL = as.matrix(expand.grid("age" = seq_len(data$n_ages), "year" = seq_len(data$n_years_model) ))
+  if(is.null(data$Var3D_ParamL)) data$Var3D_ParamL = 0 # Var_Param == 0 Conditional, == 1 Marginal
 
 
   # Update pars --------------------------

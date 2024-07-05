@@ -78,16 +78,6 @@ prepare_projection = function(model, proj.opts)
   } else { # if NULL, default is to continue M random effects (if they exist!)
     data$proj_M_opt <- ifelse(model$env$data$M_re_model %in% c(2,4,5), 1, 2) # 2 = IID, 4 = AR1_y, 5 = 2D AR1
   }
-
-  # add options for growth:
-  #   1 = continue random effects (if they exist) - need to pad M_re
-  #   2 = use average
-  if(!is.null(proj.opts$cont.growth.re)){
-      #data$proj_GW_opt = numeric(length(model$env$data$growth_re_model))
-      for(i in 1:length(data$proj_growth_opt)) data$proj_growth_opt[i] <- ifelse(proj.opts$cont.growth.re[i], 1, 2) 
-  } else {
-      for(i in 1:length(data$proj_growth_opt)) data$proj_growth_opt[i] <- ifelse(model$env$data$growth_re_model[i] %in% c(2,3,4,5), 1, 2) 
-  }
   # add options for LAA:
   #   1 = continue random effects (if they exist) - need to pad M_re
   #   2 = use average
@@ -100,7 +90,6 @@ prepare_projection = function(model, proj.opts)
   #   1 = continue random effects (if they exist) 
   #   2 = use average
   if(!is.null(proj.opts$cont.mat.re)){
-      #data$proj_GW_opt = numeric(length(model$env$data$growth_re_model))
       for(i in 1:length(data$proj_mat_opt)) data$proj_mat_opt[i] <- ifelse(proj.opts$cont.mat.re[i], 1, 2) 
   } else {
       for(i in 1:length(data$proj_mat_opt)) data$proj_mat_opt[i] <- ifelse(model$env$data$mat_re_model[i] > 1, 1, 2) 
@@ -215,9 +204,11 @@ prepare_projection = function(model, proj.opts)
 
   # modify data objects for projections (pad with average over avg.yrs): fracyr_SSB, waa
   avg_cols = function(x) apply(x, 2, mean, na.rm=TRUE)
-  data$mature <- rbind(data$mature[1:data$n_years_model,], matrix(rep(avg_cols(data$mature[avg.yrs.ind,]), proj.opts$n.yrs), nrow=proj.opts$n.yrs, byrow=TRUE))
+  if(input1$data$isMat_parametric == 0) {
+	data$mature <- rbind(data$mature[1:data$n_years_model,], matrix(rep(avg_cols(data$mature[avg.yrs.ind,]), proj.opts$n.yrs), nrow=proj.opts$n.yrs, byrow=TRUE))
+  }
   data$fracyr_SSB <- c(data$fracyr_SSB[1:data$n_years_model], rep(mean(data$fracyr_SSB[avg.yrs.ind]), proj.opts$n.yrs))
-  if(input1$data$isW_ewaa == 1){ # only when waa present and used
+  if(input1$data$isW_parametric == 0){ # only when waa present and used
     toadd <- apply(data$waa[,avg.yrs.ind,], c(1,3), mean)
     if(dim(data$waa)[2] > data$n_years_model) data$waa <- data$waa[,1:data$n_years_model,]
     tmp <- array(NA, dim = dim(data$waa) + c(0,proj.opts$n.yrs,0))
@@ -392,6 +383,7 @@ prepare_projection = function(model, proj.opts)
 	
         tmp[] = 1:(dim(tmp)[1]*dim(tmp)[2]) # all y,a estimated
         map$LAA_re <- factor(tmp)
+		data$ay3D_IndexL = as.matrix(expand.grid("age" = seq_len(data$n_ages), "year" = seq_len(data$n_years_model+proj.opts$n.yrs) ))
 	
 	}
 
@@ -429,6 +421,7 @@ prepare_projection = function(model, proj.opts)
 	
         tmp[] = 1:(dim(tmp)[1]*dim(tmp)[2]) # all y,a estimated
         map$WAA_re <- factor(tmp)
+		data$ay3D_IndexW = as.matrix(expand.grid("age" = seq_len(data$n_ages), "year" = seq_len(data$n_years_model+proj.opts$n.yrs) ))
 	
 	}
 

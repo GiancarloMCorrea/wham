@@ -110,8 +110,8 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(LAA_est); 
   DATA_SCALAR(age_L1); // age for L1
   DATA_INTEGER(age_L1_ceil); // age (ceiling) for L1
-  DATA_MATRIX(ay3D_IndexG);  // (n_years * n_ages) * 2 
-  DATA_INTEGER(Var3D_ParamG); // Variance parameterization of Precision Matrix == 0 (Conditional), == 1(Marginal)
+  DATA_MATRIX(ay3D_IndexL);  // (n_years * n_ages) * 2 
+  DATA_INTEGER(Var3D_ParamL); // Variance parameterization of Precision Matrix == 0 (Conditional), == 1(Marginal)
   // Maturity information
   DATA_INTEGER(isMat_parametric); // Maturity model is parametric? 1 = yes, 0 = no  
   DATA_INTEGER(mat_model); // age or length-specific
@@ -662,17 +662,18 @@ Type objective_function<Type>::operator() ()
   
 		  if(LAA_model == 3) { // Nonparametric model
 				  
+				array<Type> LAAre0 = LAA_re.col(j);
 				if((LAA_re_model(j) == 2) | (LAA_re_model(j) == 3)) { // iid and 2DAR1
 				  // likelihood of LAA deviations
 				  Sigma_LAA = pow(pow(sigma_LAA(j),2) / ((1-pow(rho_LAA_y(j),2))*(1-pow(rho_LAA_a(j),2))),0.5);
-				  nll_LAA += SCALE(SEPARABLE(AR1(rho_LAA_a(j)),AR1(rho_LAA_y(j))), Sigma_LAA)(LAA_re); // must be array, not matrix!
+				  nll_LAA += SCALE(SEPARABLE(AR1(rho_LAA_a(j)),AR1(rho_LAA_y(j))), Sigma_LAA)(LAAre0); // must be array, not matrix!
 				  SIMULATE if(simulate_state(5) == 1) if(sum(simulate_period) > 0) {
-					array<Type> LAAre_tmp = LAA_re;
-					SEPARABLE(AR1(rho_LAA_a(j)),AR1(rho_LAA_y(j))).simulate(LAAre_tmp);
-					LAAre_tmp = Sigma_LAA * LAAre_tmp;
+					//array<Type> LAAre_tmp = LAA_re;
+					SEPARABLE(AR1(rho_LAA_a(j)),AR1(rho_LAA_y(j))).simulate(LAAre0);
+					LAAre0 = Sigma_LAA * LAAre0;
 					for(int y = 0; y < n_years_model + n_years_proj; y++){
 					  if(((simulate_period(0) == 1) & (y < n_years_model)) | ((simulate_period(1) == 1) & (y > n_years_model-1))){
-						for(int a = 0; a < n_ages; a++) LAA_re(y,a,j) = LAAre_tmp(y,a,j);
+						for(int a = 0; a < n_ages; a++) LAA_re(y,a,j) = LAAre0(y,a);
 					  }
 					}
 				  }
@@ -683,8 +684,8 @@ Type objective_function<Type>::operator() ()
 				  int total_n = (n_years_model + n_years_proj)*n_ages;
 				  Eigen::SparseMatrix<Type> Q_sparseG(total_n, total_n); // Precision matrix
 				  // Construct precision matrix here
-				  Q_sparseG = construct_Q(n_years_model, n_ages, ay3D_IndexG, prho_LAA_y(j), prho_LAA_a(j), prho_LAA_c(j), sigma_LAA(j), Var3D_ParamG);
-				  nll_LAA += GMRF(Q_sparseG)(LAA_re); 
+				  Q_sparseG = construct_Q(n_years_model+n_years_proj, n_ages, ay3D_IndexL, prho_LAA_y(j), prho_LAA_a(j), prho_LAA_c(j), sigma_LAA(j), Var3D_ParamL);
+				  nll_LAA += GMRF(Q_sparseG)(LAAre0); 
 				  SIMULATE if(simulate_state(5) == 1) if(sum(simulate_period) > 0) {
 					vector<Type> LAAre_tmp(total_n); // should be a vector
 					GMRF(Q_sparseG).simulate(LAAre_tmp);
@@ -768,19 +769,20 @@ Type objective_function<Type>::operator() ()
 			  } // If WAA_model = 1 
 	  
 	  
-			  if(WAA_model == 3) { // Nonparametric model
+			  if(WAA_model == 2) { // Nonparametric model
 					  
+					array<Type> WAAre0 = WAA_re.col(j);
 					if((WAA_re_model(j) == 2) | (WAA_re_model(j) == 3)) { // iid and 2DAR1
 					  // likelihood of LAA deviations
 					  Sigma_WAA = pow(pow(sigma_WAA(j),2) / ((1-pow(rho_WAA_y(j),2))*(1-pow(rho_WAA_a(j),2))),0.5);
-					  nll_WAA += SCALE(SEPARABLE(AR1(rho_WAA_a(j)),AR1(rho_WAA_y(j))), Sigma_WAA)(WAA_re); // must be array, not matrix!
+					  nll_WAA += SCALE(SEPARABLE(AR1(rho_WAA_a(j)),AR1(rho_WAA_y(j))), Sigma_WAA)(WAAre0); // must be array, not matrix!
 					  SIMULATE if(simulate_state(6) == 1) if(sum(simulate_period) > 0) {
-						array<Type> WAAre_tmp = WAA_re;
-						SEPARABLE(AR1(rho_WAA_a(j)),AR1(rho_WAA_y(j))).simulate(WAAre_tmp);
-						WAAre_tmp = Sigma_WAA * WAAre_tmp;
+						//array<Type> WAAre_tmp = WAA_re;
+						SEPARABLE(AR1(rho_WAA_a(j)),AR1(rho_WAA_y(j))).simulate(WAAre0);
+						WAAre0 = Sigma_WAA * WAAre0;
 						for(int y = 0; y < n_years_model + n_years_proj; y++){
 						  if(((simulate_period(0) == 1) & (y < n_years_model)) | ((simulate_period(1) == 1) & (y > n_years_model-1))){
-							for(int a = 0; a < n_ages; a++) WAA_re(y,a,j) = WAAre_tmp(y,a,j);
+							for(int a = 0; a < n_ages; a++) WAA_re(y,a,j) = WAAre0(y,a);
 						  }
 						}
 					  }
@@ -791,8 +793,8 @@ Type objective_function<Type>::operator() ()
 					  int total_n = (n_years_model + n_years_proj)*n_ages;
 					  Eigen::SparseMatrix<Type> Q_sparseW(total_n, total_n); // Precision matrix
 					  // Construct precision matrix here
-					  Q_sparseW = construct_Q(n_years_model, n_ages, ay3D_IndexW, prho_WAA_y(j), prho_WAA_a(j), prho_WAA_c(j), sigma_WAA(j), Var3D_ParamW);
-					  nll_WAA += GMRF(Q_sparseW)(WAA_re); 
+					  Q_sparseW = construct_Q(n_years_model+n_years_proj, n_ages, ay3D_IndexW, prho_WAA_y(j), prho_WAA_a(j), prho_WAA_c(j), sigma_WAA(j), Var3D_ParamW);
+					  nll_WAA += GMRF(Q_sparseW)(WAAre0); 
 					  SIMULATE if(simulate_state(6) == 1) if(sum(simulate_period) > 0) {
 						vector<Type> WAAre_tmp(total_n); // should be a vector
 						GMRF(Q_sparseW).simulate(WAAre_tmp);
@@ -804,7 +806,7 @@ Type objective_function<Type>::operator() ()
 					  }
 					}		  
 								  
-			  } // If WAA_model = 3
+			  } // If WAA_model = 2
 		  
 		  } // If WAA_re_model > 1
 	  
