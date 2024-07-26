@@ -41,7 +41,7 @@ set_LAA = function(input, LAA)
     data$n_LAA_par = n_par[data$LAA_model] # number of parameters to estimate
     data$LAA_est = rep(0, times = n_par[data$LAA_model]) # estimate?
     data$n_LAA_dim = n_RE_dim[data$LAA_model]
-	data$LAA_re_model = rep(1, times = data$n_LAA_dim) # default = no RE / 'none'
+	  data$LAA_re_model = rep(1, times = data$n_LAA_dim) # default = no RE / 'none'
     LAA_re_ini = array(0, dim = c(data$n_years_model, data$n_ages, n_RE_dim[data$LAA_model]))
     #}
 

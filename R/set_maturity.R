@@ -31,13 +31,12 @@ set_maturity = function(input, basic_info, maturity)
     # Use parametric option:
     data$isMat_parametric = 1L
     
-    # Change initial values if len-specific:
-    if(!is.null(maturity$model)) {
-      if(maturity$model == 'len-logistic') { 
-        mat_ini = c(log(2), log(max(data$lengths)*0.5)) # Length logistic default
-        data$mat_model = 2
-      }
-    }
+    # Some mandatory inputs should be provided:
+    if(is.null(maturity$model)) stop("maturity$model must be provided.")
+    if(is.null(maturity$init_vals)) stop("maturity$init_vals must be provided.")
+
+    if(!(maturity$model %in% c("age-logistic", "len-logistic"))) stop("maturity$model must be 'age-logistic' or 'len-logistic'")
+    data$mat_model <- match(maturity$model, c("age-logistic", "len-logistic")) 
 
     if(!is.null(maturity$re)){
       
