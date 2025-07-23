@@ -36,17 +36,18 @@ set_M = function(input, M)
   }
   if(!is.null(M)){
     if(!is.null(M$model)){ # M model options
-      if(!(M$model %in% c("constant","age-specific","weight-at-age"))) stop("M$model must be either 'constant', 'age-specific', or 'weight-at-age'")
+      if(!(M$model %in% c("constant","age-specific","weight-at-age","Lorenzen"))) stop("M$model must be either 'constant', 'age-specific', 'weight-at-age' or 'Lorenzen'")
       if(!is.null(M$re)) if(M$model == "age-specific" & M$re == "ar1_a") stop("Cannot estimate age-specific mean M and AR1 deviations M_a.
 If you want an AR1 process on M-at-age, set M$model = 'constant' and M$re = 'ar1_a'.")
-      data$M_model <- match(M$model, c("constant","age-specific","weight-at-age"))
-      if(M$model %in% c("constant","weight-at-age")){
+	  if(!is.null(M$re)) if(M$model == "Lorenzen" & M$re != "none") stop("Cannot estimate random effects when Lorenzen M is used.")
+      data$M_model <- match(M$model, c("constant","age-specific","weight-at-age","Lorenzen"))
+      if(M$model %in% c("constant","weight-at-age","Lorenzen")){
         data$n_M_a = 1
         data$M_est = 0
         if(!is.null(asap3)) M_a_ini = log(asap3$M[1,1])
         else M_a_ini = log(0.2)
         if(!is.null(asap3)) {
-          if(is.null(M$initial_means) & length(unique(asap3$M[1,])) > 1) warning("Constant or weight-at-age M specified (so only 1 mean M parameter),
+          if(is.null(M$initial_means) & length(unique(asap3$M[1,])) > 1) warning("Constant, weight-at-age, or Lorenzen M specified (so only 1 mean M parameter),
 but first row of MAA matrix has > 1 unique value.
 Initializing M at age-1 MAA values. To avoid this warning
 without changing ASAP file, specify M$initial_means.")
@@ -63,13 +64,13 @@ without changing ASAP file, specify M$initial_means.")
       data$M_re_model <- match(M$re, c("none","iid","ar1_a","ar1_y","2dar1"))
     }
     if(!is.null(M$initial_means)){
-      if(length(M$initial_means) != data$n_M_a) stop("Length(M$initial_means) must be # ages (if age-specific M) or 1 (if constant or weight-at-age M)")
+      if(length(M$initial_means) != data$n_M_a) stop("Length(M$initial_means) must be # ages (if age-specific M) or 1 (if constant, weight-at-age, or Lorenzen M)")
       M_a_ini <- log(M$initial_means)
       # overwrite ASAP file M values
       M_re_ini[] <- 0# if estimating mean M for any ages, initialize yearly deviations at 0
     }
     if(!is.null(M$est_ages)){
-      if(!all(M$est_ages %in% 1:data$n_M_a)) stop("All M$est_ages must be in 1:n.ages (if age-specific M) or 1 (if constant or weight-at-age M)")
+      if(!all(M$est_ages %in% 1:data$n_M_a)) stop("All M$est_ages must be in 1:n.ages (if age-specific M) or 1 (if constant, weight-at-age, or Lorenzen M)")
       data$M_est[M$est_ages] = 1 # turn on estimation for specified M-at-age
       M_first_est <- M$est_ages[1]
       M_re_ini[] <- 0# if estimating mean M for any ages, initialize yearly deviations at 0

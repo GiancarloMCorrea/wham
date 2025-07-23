@@ -109,6 +109,7 @@ Type objective_function<Type>::operator() ()
   DATA_IVECTOR(LAA_re_model); // Depends on the LAA model
   DATA_IVECTOR(LAA_est); 
   DATA_SCALAR(age_L1); // age for L1
+  DATA_INTEGER(Lorenzen_Age); // ref age for Lorenzen M. 
   DATA_INTEGER(age_L1_ceil); // age (ceiling) for L1
   DATA_MATRIX(ay3D_IndexL);  // (n_years * n_ages) * 2 
   DATA_INTEGER(Var3D_ParamL); // Variance parameterization of Precision Matrix == 0 (Conditional), == 1(Marginal)
@@ -1466,13 +1467,25 @@ Type objective_function<Type>::operator() ()
 
   // Construct mortality-at-age (MAA)
   matrix<Type> MAA(n_years_model + n_years_proj,n_ages);
+  Type Lmat;
+  Type L_M1;
   if(M_model == 2){ // age-specific M
     for(int a = 0; a < n_ages; a++) for(int y = 0; y < n_years_model; y++) MAA(y,a) = exp(M_a(a) + M_re(y,a));   
   } else {
     if(M_model == 1){ // constant M
       for(int a = 0; a < n_ages; a++) for(int y = 0; y < n_years_model; y++) MAA(y,a) = exp(M_a(0) + M_re(y,a));
-    } else { // M_model = 3, M is allometric function of weight
-      for(int a = 0; a < n_ages; a++) for(int y = 0; y < n_years_model; y++) MAA(y,a) = exp(M_a(0) + M_re(y,a) - exp(log_b) * log(pred_waa(waa_pointer_jan1-1,y,a)));
+    } else { 
+      if(M_model == 3){ // M_model = 3, M is allometric function of weight
+		for(int a = 0; a < n_ages; a++) for(int y = 0; y < n_years_model; y++) MAA(y,a) = exp(M_a(0) + M_re(y,a) - exp(log_b) * log(pred_waa(waa_pointer_jan1-1,y,a)));
+	  } else { // Lorenzen M
+		for(int y = 0; y < n_years_model; y++) {
+			Lmat = jan1LAA(y, Lorenzen_Age-1);
+			for(int a = 0; a < n_ages; a++) {
+				L_M1 = exp(M_a(0))/(log(Lmat/(Lmat + LAA_par(y,a,1)*(exp(LAA_par(y,a,0)) - 1))));
+				MAA(y,a) = log(jan1LAA(y,a)/(jan1LAA(y,a) + LAA_par(y,a,1)*(exp(LAA_par(y,a,0)) - 1)))*L_M1;
+			}
+		}
+	  }
     }
   }
   // add to MAA in projection years
@@ -1494,8 +1507,18 @@ Type objective_function<Type>::operator() ()
         } else {
           if(M_model == 1){ // constant M
             for(int a = 0; a < n_ages; a++) for(int y = n_years_model; y < n_years_model + n_years_proj; y++) MAA(y,a) = exp(M_a(0) + M_re(y,a));
-          } else { // M_model = 3, M is allometric function of weight
-            for(int a = 0; a < n_ages; a++) for(int y = n_years_model; y < n_years_model + n_years_proj; y++) MAA(y,a) = exp(M_a(0) + M_re(y,a) - exp(log_b) * log(pred_waa(waa_pointer_jan1-1,y,a)));
+          } else { 
+            if(M_model == 3) { // M_model = 3, M is allometric function of weight
+				for(int a = 0; a < n_ages; a++) for(int y = n_years_model; y < n_years_model + n_years_proj; y++) MAA(y,a) = exp(M_a(0) + M_re(y,a) - exp(log_b) * log(pred_waa(waa_pointer_jan1-1,y,a)));
+			} else { // Lorenzen M
+				for(int y = n_years_model; y < n_years_model + n_years_proj; y++) {
+					Lmat = jan1LAA(y, Lorenzen_Age-1);
+					for(int a = 0; a < n_ages; a++) {
+						L_M1 = exp(M_a(0))/(log(Lmat/(Lmat + LAA_par(y,a,1)*(exp(LAA_par(y,a,0)) - 1))));
+						MAA(y,a) = log(jan1LAA(y,a)/(jan1LAA(y,a) + LAA_par(y,a,1)*(exp(LAA_par(y,a,0)) - 1)))*L_M1;
+					}	
+				}
+			}
           }
         }
       }

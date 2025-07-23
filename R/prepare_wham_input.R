@@ -487,6 +487,7 @@ prepare_wham_input <- function(asap3 = NULL, model_name="WHAM for unnamed stock"
 	  input$data$mature = asap3$maturity
 	  input$data$age_L1 = 1
 	  input$data$age_L1_ceil = 1L
+	  input$data$Lorenzen_Age = floor(input$data$n_ages/2)
 	  #len_mid = (input$data$lengths[2] - input$data$lengths[1])*0.5
 	  #input$data$mature_len = t(matrix(1/(1 + exp(-1*((input$data$lengths+len_mid) - max(input$data$lengths)/2))), input$data$n_lengths, length(input$years)))
 	  input$data$Fbar_ages = seq(asap3$Frep_ages[1], asap3$Frep_ages[2])

@@ -33,6 +33,12 @@ add_basic_info <- function(input, basic_info){
 	if(!is.null(basic_info$age_L1)) input$data$age_L1 = basic_info$age_L1 # assuming age = 1 at L1
   	if(input$data$age_L1 < 1) stop("'age_L1' cannot be younger than 1")
   	input$data$age_L1_ceil = as.integer(ceiling(input$data$age_L1)) # very important for parametric LAA.
+	# Lorenzen Age (Lmat):
+	input$data$Lorenzen_Age = floor(input$data$n_ages/2)
+	if(!is.null(basic_info$Lorenzen_Age)) {
+		if(basic_info$Lorenzen_Age > input$data$n_ages) stop("Lorenzen Age cannot be larger than the number of ages in the population.")
+		input$data$Lorenzen_Age = round(basic_info$Lorenzen_Age)
+	}
 
 	return(input)
 }
