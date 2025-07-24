@@ -17,7 +17,7 @@ matrix<Type> extract_matrix_array3(array<Type> a, int index) //matrix has to be 
 }
 
 template <class Type>
-vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, vector<Type> lengths, int n_selblocks, vector<matrix<Type> > selpars, vector<int> selblock_models)
+vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, vector<Type> lengths, int n_selblocks, vector<matrix<Type> > selpars, vector<int> selblock_models, vector<Type> Age_Nodes, vector<Type> Len_Nodes)
 {
   vector<matrix<Type> > selAL(n_selblocks);
   for(int b = 0; b < n_selblocks; b++)
@@ -112,7 +112,26 @@ vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, ve
 						}
 					  }
 				} else {
-					if(selblock_models(b) == 6) { // len-increasing logistic
+					if(selblock_models(b) == 6) { // age splines
+					  for(int y = 0; y < n_years; y++)
+					  {
+					 	Type age = 0.0;
+						vector<Type> p_1(Age_Nodes.size()); // extract all pars
+						for(int j = 0; j < Age_Nodes.size(); j++) p_1(j) = selpars(b)(y,j);
+						tmbutils::splinefun<Type> splines_fun = tmbutils::splinefun(Age_Nodes, p_1, 2); // 1=periodic, 2=natural, 3=fmm
+						for (int a = 0; a < n_ages; a++) { 
+							age += 1.0;
+							tmp(y,a) = splines_fun(age); 
+						}
+						vector<Type> selvec = tmp.row(y);
+						for (int a = 0; a < n_ages; a++) { tmp(y,a) = tmp(y,a)/max(selvec); } // maximum 1
+						for (int a = 0; a < n_ages; a++) {
+							if( (a+1) < Age_Nodes(0) ) tmp(y,a) = p_1(0); // Use selex first node when age < first node
+							if( (a+1) > Age_Nodes(Age_Nodes.size()-1) ) tmp(y,a) = p_1(p_1.size()-1); // Use selex last node when age > last node
+						}
+					  }
+					} else {
+					  if(selblock_models(b) == 7) { // len-increasing logistic
 						for(int y = 0; y < n_years; y++)
 						{
 						  Type l50 = selpars(b)(y,0); // l50 parameter in year y
@@ -123,8 +142,8 @@ vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, ve
 						  }
 						  for(int l = 0; l < n_lengths; l++) tmpL(y,l) = tmpL(y,l)/tmpL(y,n_lengths-1); // standardize from 0 to 1?
 						}
-					} else { // len-decreasing logistic
-						if(selblock_models(b) == 7) {
+					  } else { 
+						if(selblock_models(b) == 8) { // len-decreasing logistic
 							for(int y = 0; y < n_years; y++)
 							{
 							  Type l50 = selpars(b)(y,0); // l50 parameter in year y
@@ -133,41 +152,60 @@ vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, ve
 							  {
 								tmpL(y,l) = 1.0/(1.0 + exp((newLengths(l) - l50)/k)); 
 							  }
-							  for(int l = 0; l < n_lengths; l++) tmpL(y,l) = tmpL(y,l)/tmpL(y,n_lengths-1); // standardize from 0 to 1?
+							  for(int l = 0; l < n_lengths; l++) tmpL(y,l) = tmpL(y,l)/tmpL(y,0); // standardize from 0 to 1?
 							}
-						} else { // length double normal
-						  for(int y = 0; y < n_years; y++)
-						  {				
-							Type p_1 = selpars(b)(y,0); // 
-							Type p_2 = selpars(b)(y,1); // 
-							Type p_3 = selpars(b)(y,2);
-							Type p_4 = selpars(b)(y,3);
-							Type p_5 = 1/(1+exp(-selpars(b)(y,4)));
-							Type p_6 = 1/(1+exp(-selpars(b)(y,5)));
-							Type lmax = max(newLengths);
-							Type lmin = min(newLengths);
-							Type gammax = p_1 + binwidth + (0.99*lmax - p_1 - binwidth)/(1 + exp(-p_2));
-							Type alpha = 0.0;
-							Type beta = 0.0;
-							Type j_1 = 0.0;
-							Type j_2 = 0.0;
-							for (int l = 0; l < n_lengths; l++)
-							{
-							  alpha = p_5 + (1 - p_5)*(exp(-pow(newLengths(l) - p_1, 2)/exp(p_3)) - exp(-pow(lmin - p_1,2)/exp(p_3)))/(1-exp(-pow(lmin - p_1,2)/exp(p_3)));
-							  beta = 1 + (p_6 - 1)*(exp(-pow(newLengths(l) - gammax,2)/exp(p_4)) - 1)/(exp(-pow(lmax - gammax,2)/exp(p_4)) - 1);
-							  j_1 = 1/(1 + exp(-20*(newLengths(l) - p_1)/(1  + fabs(newLengths(l) - p_1))));
-							  j_2 = 1/(1 + exp(-20*(newLengths(l) - gammax)/(1  + fabs(newLengths(l) - gammax))));
-							  tmpL(y,l) = alpha * (1 - j_1) + j_1*((1 - j_2) + j_2*beta);
-							}
-						  }	
+						} else { 
+						  if(selblock_models(b) == 9) { // length double normal
+							  for(int y = 0; y < n_years; y++)
+							  {				
+								Type p_1 = selpars(b)(y,0); // 
+								Type p_2 = selpars(b)(y,1); // 
+								Type p_3 = selpars(b)(y,2);
+								Type p_4 = selpars(b)(y,3);
+								Type p_5 = 1/(1+exp(-selpars(b)(y,4)));
+								Type p_6 = 1/(1+exp(-selpars(b)(y,5)));
+								Type lmax = max(newLengths);
+								Type lmin = min(newLengths);
+								Type gammax = p_1 + binwidth + (0.99*lmax - p_1 - binwidth)/(1 + exp(-p_2));
+								Type alpha = 0.0;
+								Type beta = 0.0;
+								Type j_1 = 0.0;
+								Type j_2 = 0.0;
+								for (int l = 0; l < n_lengths; l++)
+								{
+								  alpha = p_5 + (1 - p_5)*(exp(-pow(newLengths(l) - p_1, 2)/exp(p_3)) - exp(-pow(lmin - p_1,2)/exp(p_3)))/(1-exp(-pow(lmin - p_1,2)/exp(p_3)));
+								  beta = 1 + (p_6 - 1)*(exp(-pow(newLengths(l) - gammax,2)/exp(p_4)) - 1)/(exp(-pow(lmax - gammax,2)/exp(p_4)) - 1);
+								  j_1 = 1/(1 + exp(-20*(newLengths(l) - p_1)/(1  + fabs(newLengths(l) - p_1))));
+								  j_2 = 1/(1 + exp(-20*(newLengths(l) - gammax)/(1  + fabs(newLengths(l) - gammax))));
+								  tmpL(y,l) = alpha * (1 - j_1) + j_1*((1 - j_2) + j_2*beta);
+								}
+							  }	
+						  } else { // length splines
+							for(int y = 0; y < n_years; y++)
+							  {
+								vector<Type> p_1(Len_Nodes.size()); // extract all pars
+								for(int j = 0; j < Len_Nodes.size(); j++) p_1(j) = selpars(b)(y,j);
+								tmbutils::splinefun<Type> splines_fun = tmbutils::splinefun(Len_Nodes, p_1, 2); // 1=periodic, 2=natural, 3=fmm
+								for (int l = 0; l < n_lengths; l++) { 
+									tmpL(y,l) = splines_fun(newLengths(l)); 
+								}
+								vector<Type> selvec = tmpL.row(y);
+								for (int l = 0; l < n_lengths; l++) { tmpL(y,l) = tmpL(y,l)/max(selvec); } // maximum 1
+								for (int l = 0; l < n_lengths; l++) {
+									if( newLengths(l) < Len_Nodes(0) ) tmpL(y,l) = p_1(0); // Use selex first node when length < first node
+									if( newLengths(l) > Len_Nodes(Len_Nodes.size()-1) ) tmpL(y,l) = p_1(p_1.size()-1); // Use selex last node when length > last node
+								}
+							  }
+						  }
+						}
+					
 						}
 					}
-					
 				}
-		  }
-        }
-      }
-    }
+			}
+		}
+	  }
+	}
 	
     if(selblock_models(b) < 6) selAL(b) = tmp; // age selex
 	else selAL(b) = tmpL; // len selex

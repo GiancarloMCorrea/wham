@@ -19,7 +19,9 @@ Type objective_function<Type>::operator() ()
   DATA_INTEGER(n_fleets);
   DATA_INTEGER(n_indices);
   DATA_INTEGER(n_selblocks);
-  DATA_IVECTOR(selblock_models); // for each block: 1 = age-specific, 2 = logistic, 3 = double-logistic, 4 = logistic (declining), 5 = age double normal, 6 = len logistic, 7 = len decreasing logistic, 8 = len double normal
+  DATA_IVECTOR(selblock_models); // for each block: 1 = age-specific, 2 = logistic, 3 = double-logistic, 4 = logistic (declining), 5 = age double normal, 6 = age-based splines, 7 = len logistic, 8 = len decreasing logistic, 9 = len double normal, 10 = length based splines
+  DATA_VECTOR(Age_Nodes); // Nodes age selex splines
+  DATA_VECTOR(Len_Nodes); // Nodes len selex splines
   DATA_IVECTOR(selblock_models_re); // for each block: 1 = none, 2 = IID, 3 = ar1, 4 = ar1_y, 5 = 2dar1
   DATA_IVECTOR(n_selpars);
   DATA_IMATRIX(selpars_est); // n_blocks x (n_pars + n_ages), is the selpar estimated in this block?
@@ -339,6 +341,7 @@ Type objective_function<Type>::operator() ()
   vector<array<Type> > selpars_re_mats(n_selblocks); // gets selectivity deviations (RE vector, selpars_re) as vector of matrices (nyears x npars), one for each block
   vector<matrix<Type> > selpars(n_selblocks); // selectivity parameter matrices for each block, nyears x npars
   Type nll_sel = Type(0);
+  int N_Age_Nodes = Age_Nodes.size();
   int istart = 0;
   int ct = 0;
   for(int b = 0; b < n_selblocks; b++){
@@ -350,8 +353,10 @@ Type objective_function<Type>::operator() ()
     if((selblock_models(b) == 2) | (selblock_models(b) == 4)) jstart = n_ages;
     if(selblock_models(b) == 3) jstart = n_ages + 2; // 
     if(selblock_models(b) == 5) jstart = n_ages + 6;
-    if((selblock_models(b) == 6) | (selblock_models(b) == 7)) jstart = n_ages + 12;
-    if(selblock_models(b) == 8) jstart = n_ages + 14;
+	if(selblock_models(b) == 6) jstart = n_ages + 12;
+    if((selblock_models(b) == 7) | (selblock_models(b) == 8)) jstart = n_ages + N_Age_Nodes + 12;
+    if(selblock_models(b) == 9) jstart = n_ages + N_Age_Nodes + 14;
+	if(selblock_models(b) == 10) jstart = n_ages + N_Age_Nodes + 20;
 
     if(selblock_models_re(b) > 1){
       // fill in sel devs from RE vector, selpars_re (fixed at 0 if RE off)
@@ -436,7 +441,7 @@ Type objective_function<Type>::operator() ()
   if(do_post_samp(2) == 1) ADREPORT(selpars_re);
   REPORT(logit_selpars);
   REPORT(nll_sel);
-  selAL = get_selectivity(n_years_model, n_ages, n_lengths, lengths, n_selblocks, selpars, selblock_models); // Get selectivity by block, age, year. This contains either selex-at-age or selex-at-len
+  selAL = get_selectivity(n_years_model, n_ages, n_lengths, lengths, n_selblocks, selpars, selblock_models, Age_Nodes, Len_Nodes); // Get selectivity by block, age, year. This contains either selex-at-age or selex-at-len
   nll += nll_sel;
 
   // Environmental covariate process model --------------------------------------

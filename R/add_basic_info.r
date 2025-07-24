@@ -39,6 +39,19 @@ add_basic_info <- function(input, basic_info){
 		if(basic_info$Lorenzen_Age > input$data$n_ages) stop("Lorenzen Age cannot be larger than the number of ages in the population.")
 		input$data$Lorenzen_Age = round(basic_info$Lorenzen_Age)
 	}
+	# Splines Selectivity
+	input$data$Age_Nodes = sort(sample(1:input$data$n_ages, size = 3)) # Nodes for splies age-based selex
+	input$data$Len_Nodes = sort(sample(input$data$lengths, size = 3)) # Nodes for splies len-based selex
+	if(!is.null(basic_info$Age_Nodes)) {
+		N_Age_Nodes = length(basic_info$Age_Nodes)
+		if(N_Age_Nodes < 3) stop("Number of selectivity nodes (splines) should be equal or greater than 3.")
+		input$data$Age_Nodes = basic_info$Age_Nodes
+	}
+	if(!is.null(basic_info$Len_Nodes)) {
+		N_Len_Nodes = length(basic_info$Len_Nodes)
+		if(N_Len_Nodes < 3) stop("Number of selectivity nodes (splines) should be equal or greater than 3.")
+		input$data$Len_Nodes = basic_info$Len_Nodes
+	}
 
 	return(input)
 }
