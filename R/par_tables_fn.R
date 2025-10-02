@@ -24,7 +24,9 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
     sd = as.list(sdrep, "Std")
   } else {
     pars = mod$parList
-    sd = lapply(pars, function(x) x[] = NA)
+	sd = pars
+	for(i in seq_along(sd)) sd[[i]][] = NA
+    # sd = lapply(pars, function(x) x[] = NA)
   }
 
   fe.names = character()
@@ -69,7 +71,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       }
       if(data$use_steepness == 1){
         tvar_h = length(unique(mod$rep$SR_h_tf)) != 1 #see if anything is causing mean recruitment to vary over time
-        tvar_RO = length(unique(mod$rep$log_SR_R0)) != 1 #see if anything is causing mean recruitment to vary over time
+        tvar_R0 = length(unique(mod$rep$log_SR_R0)) != 1 #see if anything is causing mean recruitment to vary over time
         if(!tvar_h){
           fe.names = c(fe.names, "B-H h")
           fe.vals = c(fe.vals, 0.2 + 0.8/(1+exp(-pars$mean_rec_pars[1])))
@@ -115,7 +117,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       }
       if(data$use_steepness == 1){
         tvar_h = length(unique(mod$rep$SR_h_tf)) != 1 #see if anything is causing mean recruitment to vary over time
-        tvar_RO = length(unique(mod$rep$log_SR_R0)) != 1 #see if anything is causing mean recruitment to vary over time
+        tvar_R0 = length(unique(mod$rep$log_SR_R0)) != 1 #see if anything is causing mean recruitment to vary over time
         if(!tvar_h){
           fe.names = c(fe.names, "Ricker h")
           fe.vals = c(fe.vals, 0.2 + exp(pars$mean_rec_pars[1]))
@@ -185,6 +187,8 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       extra.name = ""
     } else extra.name = "Mean "
 
+	N_Age_Nodes = length(data$Age_Nodes)
+	N_Len_Nodes = length(data$Len_Nodes)
     if(data$selblock_models[i] == 1) {
       fe.names = c(fe.names, paste0("Block ", i, ": ", extra.name, "Selectivity for age ", mod$ages))
       ind = 1:data$n_ages
@@ -205,17 +209,25 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       fe.names = c(fe.names, paste0("Block ", i, ": ", extra.name, c("age peak", "top","asc-width", "desc-width", "init", "final")))
       ind = data$n_ages + 7:12
     }
-    if(data$selblock_models[i] == 6){ #length logistic
+    if(data$selblock_models[i] == 6){ # age splines
+      fe.names = c(fe.names, paste0("Block ", i, ": ", extra.name, paste0('Selex for age ', data$Age_Nodes)))
+      ind = data$n_ages + 13:(13+N_Age_Nodes-1)
+    }
+    if(data$selblock_models[i] == 7){ #length logistic
       fe.names = c(fe.names, paste0("Block ", i, ": ", extra.name, c("$l_{50}$", "1/slope (increasing)")))
-      ind = data$n_ages + 13:14
+      ind = data$n_ages + (13+N_Age_Nodes):(13+N_Age_Nodes+1)
     }
-    if(data$selblock_models[i] == 7){ #decreasing logistic
+    if(data$selblock_models[i] == 8){ #decreasing logistic
       fe.names = c(fe.names, paste0("Block ", i, ": ", extra.name, c("$l_{50}$", "-1/slope (decreasing)")))
-      ind = data$n_ages + 13:14
+      ind = data$n_ages + (13+N_Age_Nodes):(13+N_Age_Nodes+1)
     }
-    if(data$selblock_models[i] == 8){ # len double normal
+    if(data$selblock_models[i] == 9){ # len double normal
       fe.names = c(fe.names, paste0("Block ", i, ": ", extra.name, c("length peak", "top","asc-width", "desc-width", "init", "final")))
-      ind = data$n_ages + 15:20
+      ind = data$n_ages + (13+N_Age_Nodes+2):(13+N_Age_Nodes+7)
+    }
+    if(data$selblock_models[i] == 10){ # len splines
+      fe.names = c(fe.names, paste0("Block ", i, ": ", extra.name, paste0('Selex for fish length ', data$Len_Nodes)))
+      ind = data$n_ages + (13+N_Age_Nodes+8):(13+N_Age_Nodes+8+N_Len_Nodes-1)
     }
     fe.vals = c(fe.vals, ((data$selpars_lower + data$selpars_upper-data$selpars_lower)/(1 + exp(-pars$logit_selpars)))[i,ind])
     for(a in ind) {
@@ -232,8 +244,10 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       if(data$selblock_models[i] %in% c(2,4)) modify = " $\\rho$ for $a_{50}$ and 1/slope" 
       if(data$selblock_models[i] == 3) modify = " AR1 $\\rho$ for age double-logistic pars"
       if(data$selblock_models[i] == 5) modify = " AR1 $\\rho$ for age double-normal pars"
-      if(data$selblock_models[i] %in% c(6,7)) modify = " $\\rho$ for $l_{50}$ and 1/slope" 
-      if(data$selblock_models[i] == 8) modify = " AR1 $\\rho$ for length double-normal pars"
+	  if(data$selblock_models[i] == 6) modify = " To be edited"
+      if(data$selblock_models[i] %in% c(7,8)) modify = " $\\rho$ for $l_{50}$ and 1/slope" 
+      if(data$selblock_models[i] == 9) modify = " AR1 $\\rho$ for length double-normal pars"
+	  if(data$selblock_models[i] == 10) modify = " To be edited"
       fe.names = c(fe.names, paste0("Block ", i , ": Selectivity RE", modify))
       fe.vals = c(fe.vals, -1 + 2/(1 + exp(- 2 * pars$sel_repars[i,2])))
       fe.cis = rbind(fe.cis, ci(pars$sel_repars[i,2], sd$sel_repars[i,2], lo = -1, hi = 1, type = "expit", k = 2))
@@ -392,7 +406,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
 
   # Natural Mortality
  if(sum(!is.na(mod$input$map$M_a))){ #any M_a estimated?
-    if(data$M_re_model == 1 & data$Ecov_where[2] == 0 & data$M_model %in% 1:2){ #no random effects, ecov or WAA effects on M
+    if(data$M_re_model == 1 & data$Ecov_where[2] == 0 & data$M_model %in% c(1:2,4)){ #no random effects, ecov or WAA effects on M
       modify = "M for ages("
     } else {
       if(data$M_model != 3) modify = "mean log(M) for ages ("
@@ -402,7 +416,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
     age.list = M_a_point = list()
     M_map = as.integer(as.character(mod$input$map$M_a))
     ind = unique(M_map[which(!is.na(M_map))])
-    if(data$M_model == 1) {
+    if(data$M_model %in% c(1,4)) {
       M_a_point[[1]] = 1
       ages.list = list(mod$ages)
     }
@@ -484,54 +498,52 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
 
   # Somatic growth
     # parametric:
-    if(data$isG_parametric == 1){
+    if(data$LAA_model %in% c(1,2)){
 
-      Gpar_vector = as.vector(pars$growth_a)
-      if(data$growth_model == 1) Gpar_names = c('K', 'Linf', 'L1')
-      if(data$growth_model == 2) Gpar_names = c('K', 'Linf', 'L1', 'Gamma')
+      Gpar_vector = as.vector(pars$LAA_a)
+      if(data$LAA_model == 1) Gpar_names = c('K', 'Linf', 'L1')
+      if(data$LAA_model == 2) Gpar_names = c('K', 'Linf', 'L1', 'Gamma')
       fe.names = c(fe.names, Gpar_names)
       fe.vals = c(fe.vals, exp(Gpar_vector))
 
-      for(j in 1:mod$input$data$n_growth_par) {
-        fe.cis = rbind(fe.cis, ci(Gpar_vector[j], as.vector(sd$growth_a)[j], type = "exp"))
-        if(data$growth_re_model[j]%in%c(2,4)){
+      for(j in 1:mod$input$data$n_LAA_par) {
+        fe.cis = rbind(fe.cis, ci(Gpar_vector[j], as.vector(sd$LAA_a)[j], type = "exp"))
+        if(data$LAA_re_model[j]%in%c(2,4)){
           fe.names = c(fe.names, paste0(Gpar_names[j], " RE $\\sigma$ (year)"))
-          fe.vals = c(fe.vals, exp(pars$growth_repars[j,1]))
-          fe.cis = rbind(fe.cis, ci(pars$growth_repars[j,1], sd$growth_repars[j,1], type = "exp"))
-          if(data$growth_re_model[j] == c(4)){
+          fe.vals = c(fe.vals, exp(pars$LAA_repars[j,1]))
+          fe.cis = rbind(fe.cis, ci(pars$LAA_repars[j,1], sd$LAA_repars[j,1], type = "exp"))
+          if(data$LAA_re_model[j] == c(4)){
             fe.names = c(fe.names, paste0(Gpar_names[j], " RE AR1 $\\rho$ (year)"))
-            fe.vals = c(fe.vals, exp(pars$growth_repars[j,2]))
-            fe.cis = rbind(fe.cis, ci(pars$growth_repars[j,2], pars$growth_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
+            fe.vals = c(fe.vals, exp(pars$LAA_repars[j,2]))
+            fe.cis = rbind(fe.cis, ci(pars$LAA_repars[j,2], pars$LAA_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
           }
         }
-        if(data$growth_re_model[j]%in%c(3,5)){
+        if(data$LAA_re_model[j]%in%c(3,5)){
           fe.names = c(fe.names, paste0(Gpar_names[j], " RE $\\sigma$ (cohort)"))
-          fe.vals = c(fe.vals, exp(pars$growth_repars[j,1]))
-          fe.cis = rbind(fe.cis, ci(pars$growth_repars[j,1], sd$growth_repars[j,1], type = "exp"))
-          if(data$growth_re_model[j] == c(5)){
+          fe.vals = c(fe.vals, exp(pars$LAA_repars[j,1]))
+          fe.cis = rbind(fe.cis, ci(pars$LAA_repars[j,1], sd$LAA_repars[j,1], type = "exp"))
+          if(data$LAA_re_model[j] == c(5)){
             fe.names = c(fe.names, paste0(Gpar_names[j], " RE AR1 $\\rho$ (cohort)"))
-            fe.vals = c(fe.vals, exp(pars$growth_repars[j,2]))
-            fe.cis = rbind(fe.cis, ci(pars$growth_repars[j,2], pars$growth_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
+            fe.vals = c(fe.vals, exp(pars$LAA_repars[j,2]))
+            fe.cis = rbind(fe.cis, ci(pars$LAA_repars[j,2], pars$LAA_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
           }
         }
       }
 
       # SD information:
-      SD_vector = as.vector(pars$SDgrowth_par)
+      SD_vector = as.vector(pars$SD_par)
       fe.names = c(fe.names, c('SD1', 'SDA'))
       fe.vals = c(fe.vals, exp(SD_vector))
-      for(j in 1:2) fe.cis = rbind(fe.cis, ci(SD_vector[j], as.vector(sd$SDgrowth_par)[j], type = "exp"))
+      for(j in 1:2) fe.cis = rbind(fe.cis, ci(SD_vector[j], as.vector(sd$SD_par)[j], type = "exp"))
 
     }
 
     # nonparametric
-    if(data$isG_nonparametric == 1){
-      if(data$isG_parametric == 0) {
-        fe.names = c(fe.names, paste0("Mean length for age ", mod$ages.lab))
-        fe.vals = c(fe.vals, exp(pars$LAA_a))
-        for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$LAA_a[a], sd$LAA_a[a], type = "exp"))
-      }
-    
+    if(data$LAA_model == 3){
+       fe.names = c(fe.names, paste0("Mean length for age ", mod$ages.lab))
+       fe.vals = c(fe.vals, exp(pars$LAA_a))
+       for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$LAA_a[a], sd$LAA_a[a], type = "exp"))
+  
       if(data$LAA_re_model > 1) {
         fe.names = c(fe.names, "LAA RE $\\sigma$")
         fe.vals = c(fe.vals, exp(pars$LAA_repars[1]))
@@ -549,67 +561,65 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
       }
 
       # SD information:
-      if(data$isG_parametric == 0) {
-        SD_vector = as.vector(pars$SDLAA_par)
-        fe.names = c(fe.names, c('SD1', 'SDA'))
-        fe.vals = c(fe.vals, exp(SD_vector))
-        for(j in 1:2) fe.cis = rbind(fe.cis, ci(SD_vector[j], as.vector(sd$SDLAA_par)[j], type = "exp"))
-      }
+      SD_vector = as.vector(pars$SD_par)
+      fe.names = c(fe.names, c('SD1', 'SDA'))
+      fe.vals = c(fe.vals, exp(SD_vector))
+      for(j in 1:2) fe.cis = rbind(fe.cis, ci(SD_vector[j], as.vector(sd$SD_par)[j], type = "exp"))
+      
     }
 
   # LW parameters
     # parametric:
-  if(data$isW_parametric == 1) {
-    LW_vector = as.vector(pars$LW_a)
+  if(data$WAA_model == 1) {
+    LW_vector = as.vector(pars$WAA_a)
     LWpar_names = c("a (length-weight)", "b (length-weight)")
     fe.names = c(fe.names, LWpar_names)
     fe.vals = c(fe.vals, exp(LW_vector))
 
       for(j in 1:2) {
-        fe.cis = rbind(fe.cis, ci(LW_vector[j], as.vector(sd$LW_a)[j], type = "exp"))
-        if(data$LW_re_model[j]%in%c(2,4)){
+        fe.cis = rbind(fe.cis, ci(LW_vector[j], as.vector(sd$WAA_a)[j], type = "exp"))
+        if(data$WAA_re_model[j]%in%c(2,4)){
           fe.names = c(fe.names, paste0(LWpar_names[j], " RE $\\sigma$ (year)"))
-          fe.vals = c(fe.vals, exp(pars$LW_repars[j,1]))
-          fe.cis = rbind(fe.cis, ci(pars$LW_repars[j,1], sd$LW_repars[j,1], type = "exp"))
-          if(data$LW_re_model[j] == c(4)){
+          fe.vals = c(fe.vals, exp(pars$WAA_repars[j,1]))
+          fe.cis = rbind(fe.cis, ci(pars$WAA_repars[j,1], sd$WAA_repars[j,1], type = "exp"))
+          if(data$WAA_re_model[j] == c(4)){
             fe.names = c(fe.names, paste0(LWpar_names[j], " RE AR1 $\\rho$ (year)"))
-            fe.vals = c(fe.vals, exp(pars$LW_repars[j,2]))
-            fe.cis = rbind(fe.cis, ci(pars$LW_repars[j,2], pars$LW_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
+            fe.vals = c(fe.vals, exp(pars$WAA_repars[j,2]))
+            fe.cis = rbind(fe.cis, ci(pars$WAA_repars[j,2], pars$WAA_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
           }
         }
-        if(data$LW_re_model[j]%in%c(3,5)){
+        if(data$WAA_re_model[j]%in%c(3,5)){
           fe.names = c(fe.names, paste0(LWpar_names[j], " RE $\\sigma$ (cohort)"))
-          fe.vals = c(fe.vals, exp(pars$LW_repars[j,1]))
-          fe.cis = rbind(fe.cis, ci(pars$LW_repars[j,1], sd$LW_repars[j,1], type = "exp"))
-          if(data$LW_re_model[j] == c(5)){
+          fe.vals = c(fe.vals, exp(pars$WAA_repars[j,1]))
+          fe.cis = rbind(fe.cis, ci(pars$WAA_repars[j,1], sd$WAA_repars[j,1], type = "exp"))
+          if(data$WAA_re_model[j] == c(5)){
             fe.names = c(fe.names, paste0(LWpar_names[j], " RE AR1 $\\rho$ (cohort)"))
-            fe.vals = c(fe.vals, exp(pars$LW_repars[j,2]))
-            fe.cis = rbind(fe.cis, ci(pars$LW_repars[j,2], pars$LW_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
+            fe.vals = c(fe.vals, exp(pars$WAA_repars[j,2]))
+            fe.cis = rbind(fe.cis, ci(pars$WAA_repars[j,2], pars$WAA_repars[j,2], lo = -1, hi = 1, type = "expit", k = 2))
           }
         }
       }
   }
 
   # nonparametric
-    if(data$isW_nonparametric == 1){
-      if(data$isW_parametric == 0) {
-        fe.names = c(fe.names, paste0("Mean weight for age ", mod$ages.lab))
-        fe.vals = c(fe.vals, exp(pars$WAA_a))
-        for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$WAA_a[a], sd$WAA_a[a], type = "exp"))
-      }
+    if(data$WAA_model == 2){
+      fe.names = c(fe.names, paste0("Mean weight for age ", mod$ages.lab))
+      fe.vals = c(fe.vals, exp(pars$WAA_a))
+      for(a in 1:data$n_ages) fe.cis = rbind(fe.cis, ci(pars$WAA_a[a], sd$WAA_a[a], type = "exp"))
+
     
-      if(data$LAA_re_model > 1) {
-        fe.names = c(fe.names, "LAA RE $\\sigma$")
-        fe.vals = c(fe.vals, exp(pars$LAA_repars[1]))
-        fe.cis = rbind(fe.cis, ci(pars$LAA_repars[1], sd$LAA_repars[1], type = "exp"))
-        if(data$LAA_re_model%in%c(4,5)){
+      if(data$WAA_re_model > 1) {
+        fe.names = c(fe.names, "WAA RE $\\sigma$")
+        fe.vals = c(fe.vals, exp(pars$WAA_repars[1]))
+        fe.cis = rbind(fe.cis, ci(pars$WAA_repars[1], sd$WAA_repars[1], type = "exp"))
+        if(data$WAA_re_model%in%c(4,5)){
           fe.names = c(fe.names, "LAA RE $\\rho$ (age)")
-          fe.vals = c(fe.vals, exp(pars$LAA_repars[2]))
-          fe.cis = rbind(fe.cis, ci(pars$LAA_repars[2], sd$LAA_repars[2], type = "exp"))
-          if(data$LAA_re_model == c(5)){
+          fe.vals = c(fe.vals, exp(pars$WAA_repars[2]))
+          fe.cis = rbind(fe.cis, ci(pars$WAA_repars[2], sd$WAA_repars[2], type = "exp"))
+          if(data$WAA_re_model == c(5)){
             fe.names = c(fe.names, "LAA RE $\\rho$ (year)")
-            fe.vals = c(fe.vals, exp(pars$LAA_repars[3]))
-            fe.cis = rbind(fe.cis, ci(pars$LAA_repars[3], pars$LAA_repars[3], lo = -1, hi = 1, type = "expit", k = 2))
+            fe.vals = c(fe.vals, exp(pars$WAA_repars[3]))
+            fe.cis = rbind(fe.cis, ci(pars$WAA_repars[3], pars$WAA_repars[3], lo = -1, hi = 1, type = "expit", k = 2))
           }
         }
       }
@@ -775,7 +785,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
   
   #numbers at age
   NAA = NAA.cv = mod$rep$NAA
-  if(!mod$na_sdrep) NAA.cv[] = mod$sdrep$sd["log_NAA_rep"]
+  if(mod$is_sdrep) if(!mod$na_sdrep) NAA.cv[] = sd["log_NAA_rep"]
   NAA.sd = NAA * NAA.cv
   NAA.lo = exp(log(NAA) - qnorm(0.975) * NAA.cv)
   NAA.hi = exp(log(NAA) + qnorm(0.975) * NAA.cv)
@@ -789,7 +799,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
   #Total F at age
   FAA_tot = mod$rep$FAA_tot
   FAA_tot.cv = matrix(NA, NROW(FAA_tot), NCOL(FAA_tot))
-  if(!mod$na_sdrep) FAA_tot.cv[] = mod$sdrep$sd["log_FAA_tot"]
+  if(mod$is_sdrep) if(!mod$na_sdrep) FAA_tot.cv[] = sd["log_FAA_tot"]
   FAA_tot.sd = FAA_tot * FAA_tot.cv
   FAA_tot.lo = exp(mod$rep$FAA_tot - qnorm(0.975) * FAA_tot.cv)
   FAA_tot.hi = exp(mod$rep$FAA_tot + qnorm(0.975) * FAA_tot.cv)
@@ -803,7 +813,7 @@ par_tables_fn = function(mod, do.tex=FALSE, do.html=FALSE, od)
   #F at age
   FAA = mod$rep$FAA
   FAA.cv = array(NA, dim = dim(FAA))
-  if(!mod$na_sdrep) FAA.cv[] = mod$sdrep$sd["log_FAA"]
+  if(mod$is_sdrep) if(!mod$na_sdrep) FAA.cv[] = sd["log_FAA"]
   FAA.sd = FAA * FAA.cv
   FAA.lo = exp(mod$rep$FAA - qnorm(0.975) * FAA.cv)
   FAA.hi = exp(mod$rep$FAA + qnorm(0.975) * FAA.cv)

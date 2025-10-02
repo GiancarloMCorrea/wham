@@ -212,7 +212,7 @@ set_selectivity = function(input, selectivity)
   selpars_hi[,data$n_ages + N_Age_Nodes + 13:15] = max(data$lengths) 
   selpars_hi[,data$n_ages + N_Age_Nodes + 16:20] = 11 
   # Maximum value for splines:
-  selpars_hi[,data$n_ages + c(13:(N_Age_Nodes+12), (N_Age_Nodes+21):(N_Age_Nodes+N_Len_Nodes+20))] = 100 # makes sense? test it
+  selpars_hi[,data$n_ages + c(13:(N_Age_Nodes+12), (N_Age_Nodes+21):(N_Age_Nodes+N_Len_Nodes+20))] = 1 # makes sense? test it
 
 
   temp = matrix(NA, data$n_selblocks, data$n_ages + 20 + N_Age_Nodes + N_Len_Nodes)

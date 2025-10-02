@@ -2366,7 +2366,7 @@ plot.fleet.sel.blocks <- function(mod, ages, ages.lab, plot.colors, do.tex = FAL
 	  blocks = unique(sb_p[,i])
 		n.blocks <- length(blocks)
     # sel = rbind(mod$rep$selblocks[blocks,])
-    if(all(dat$selblock_models[blocks] <= 5)) {
+    if(all(dat$selblock_models[blocks] <= 6)) {
       sel = do.call(rbind, lapply(mod$rep$selAA, function(x) apply(x,2,mean)))[blocks,,drop=FALSE]
       bin = ages
       xLab  = 'Age'
@@ -2426,7 +2426,7 @@ plot.index.sel.blocks <- function(mod, ages, ages.lab, plot.colors, do.tex = FAL
 	  blocks = unique(sb_p[,i])
 		n.blocks <- length(blocks)
     # sel = rbind(mod$rep$selblocks[blocks,])
-    if(all(dat$selblock_models[blocks] <= 5)) {
+    if(all(dat$selblock_models[blocks] <= 6)) {
       sel = do.call(rbind, lapply(mod$rep$selAA, function(x) apply(x,2,mean)))[blocks,,drop=FALSE]
       bin = ages
       xLab  = 'Age'
@@ -2600,7 +2600,7 @@ plot.SSB.AA <- function(mod, ages, ages.lab, plot.colors, prop=FALSE)
   years_full <-  mod$years_full
 	n.yrs <- length(years_full)
   ssbfrac = dat$fracyr_SSB
-	ssb.aa <- (mod$rep$NAA * exp(-ssbfrac * (mod$rep$FAA_tot + mod$rep$MAA)) * mod$rep$pred_waa[dat$waa_pointer_ssb,,] * dat$mature)/1000
+	ssb.aa <- (mod$rep$NAA * exp(-ssbfrac * (mod$rep$FAA_tot + mod$rep$MAA)) * mod$rep$pred_waa[dat$waa_pointer_ssb,,] * mod$rep$mat_at_age)/1000
 	ssb.max <- max(apply(ssb.aa,1,sum))
 
 	par(mfrow=c(1,1), mar=c(5,5,1,1), oma = c(0,0,0,0))
@@ -2966,23 +2966,23 @@ plot.M <- function(mod, ages, ages.lab, alpha = 0.05, plot.colors)
 plot.catch.by.fleet <- function(mod, units = "mt", plot.colors)
 {
   origpar <- par(no.readonly = TRUE)
-  par(mfrow = c(1,1))
   dat = mod$env$data
   years = mod$years
   nyrs = length(years)
-	catch.obs <- dat$agg_catch
-	n_fleets <- dat$n_fleets
+  catch.obs <- dat$agg_catch
+  n_fleets <- dat$n_fleets
+  if (n_fleets > 1) par(mfrow = c(2,1))
+  else par(mfrow = c(1,1))
   if(missing(plot.colors)) plot.colors = mypalette(n_fleets)
 	barplot(t(catch.obs), xlab="Year", ylab= paste0("Catch (", units, ")"), ylim=c(0,1.1*max(apply(catch.obs,1,sum))), col=plot.colors,space=0)
 	axis(side=1, at = seq(2,nyrs,2)-0.5, labels = years[seq(2,nyrs,2)], cex=0.75)
+	legend('top', legend=paste0("Fleet ",1:n_fleets), horiz=TRUE, pch=15, col=plot.colors)
 	box(lwd = 2)
 	if (n_fleets > 1)
   {
-    legend('top', legend=paste0("Fleet ",1:n_fleets), horiz=TRUE, pch=15, col=plot.colors)
-
     # do proportions only if n_fleets > 1
-		catch.prop <- catch.obs/apply(catch.obs,1,sum)
-		barplot(t(catch.prop), xlab="Year", ylab="Proportion of Catch", ylim=c(0,1.1), col=plot.colors, space=0)
+	catch.prop <- catch.obs/apply(catch.obs,1,sum)
+	barplot(t(catch.prop), xlab="Year", ylab="Proportion of Catch", ylim=c(0,1.1), col=plot.colors, space=0)
     axis(side=1, las=2, at = seq(2,nyrs,2)-0.5, labels = years[seq(2,nyrs,2)], cex=0.75, las=2)
     box(lwd = 2)
 		legend('top', legend=paste0("Fleet ",1:n_fleets), horiz=TRUE, pch=15, col=plot.colors)
@@ -3400,20 +3400,21 @@ plot.maturity <- function(mod, ages.lab, plot.colors)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
+  mat = mod$rep$mat_at_age
   years = mod$years
   n_years = length(years)
   ages = 1:dat$n_ages
   if(missing(ages.lab)) ages.lab = mod$ages.lab
-	meanmaturity <- apply(dat$mature,2,mean)
+	meanmaturity <- apply(mat,2,mean)
 	if(missing(plot.colors)) plot.colors <- mypalette(n_years)
 
-	plot(ages,meanmaturity,type='l',lwd=2,xlab="Age",ylab="Maturity",ylim=c(0,max(dat$mature)), axes = FALSE)
+	plot(ages,meanmaturity,type='l',lwd=2,xlab="Age",ylab="Maturity",ylim=c(0,max(mat)), axes = FALSE)
   axis(1, at = ages, labels = ages.lab, lwd = 2)
   axis(2, lwd = 2)
   box(lwd = 2)
-	if (length(unique(dat$mature)) > length(ages))
+	if (length(unique(mat)) > length(ages))
 	{
-		for (i in 1:n_years) points(jitter(ages, factor=0.4), dat$mature[i,],col=plot.colors[i])
+		for (i in 1:n_years) points(jitter(ages, factor=0.4), mat[i,],col=plot.colors[i])
     midi <- floor(n_years/2)
 		legend('topleft', horiz=FALSE, legend=c(years[1],years[midi],years[n_years]), pch=c(1,1,1), col=c(plot.colors[1], plot.colors[midi], plot.colors[n_years]))
 	}
@@ -3470,7 +3471,7 @@ plot.SPR.table <- function(mod, nyrs.ave = 5, plot=TRUE)
 	n_years <- length(years)
   avg.ind = (n_years-nyrs.ave+1):n_years
 	#fec.age <- apply(dat$waa[dat$waa_pointer_ssb,,][avg.ind,],2,mean)
-	mat.age <- apply(dat$mature[avg.ind,],2,mean)
+	mat.age <- apply(mod$rep$mat_at_age[avg.ind,],2,mean)
 	ssb.waa <- apply(mod$rep$pred_waa[dat$waa_pointer_ssb,,][avg.ind,],2,mean)
 	catch.waa <- apply(mod$rep$pred_waa[dat$waa_pointer_totcatch,,][avg.ind,],2,mean)
 	M.age <- apply(mod$rep$MAA[avg.ind,],2,mean)
@@ -3559,7 +3560,7 @@ plot.annual.SPR.targets <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam
   n_years_full = length(years_full)
 
   fec.age <- mod$rep$pred_waa[dat$waa_pointer_ssb,,]
-	mat.age <- dat$mature
+	mat.age <- mod$rep$mat_at_age
 	wgt.age <- mod$rep$pred_waa[dat$waa_pointer_totcatch,,]
 	M.age <- mod$rep$MAA
 	sel.age <- mod$rep$FAA_tot/apply(mod$rep$FAA_tot,1,max)
@@ -3987,7 +3988,7 @@ plot.yield.curves <- function(mod, nyrs.ave = 5, plot=TRUE, do.tex = FALSE, do.p
   years = mod$years
   n_years = length(years)
   avg.ind = (n_years-nyrs.ave+1):n_years
-	mat.age <- apply(dat$mature[avg.ind,],2,mean)
+	mat.age <- apply(mod$rep$mat_at_age[avg.ind,],2,mean)
 	ssb.waa <- apply(mod$rep$pred_waa[dat$waa_pointer_ssb,,][avg.ind,],2,mean)
 	catch.waa <- apply(mod$rep$pred_waa[dat$waa_pointer_totcatch,,][avg.ind,],2,mean)
 	M.age <- apply(mod$rep$MAA[avg.ind,],2,mean)
@@ -4073,7 +4074,7 @@ plot.exp.spawn <- function(mod, nyrs.ave = 5)
   years = mod$years
   n_years = length(years)
   avg.ind = (n_years-nyrs.ave+1):n_years
-	mat.age <- apply(dat$mature[avg.ind,],2,mean)
+	mat.age <- apply(mod$rep$mat_at_age[avg.ind,],2,mean)
 	ssb.waa <- apply(mod$rep$pred_waa[dat$waa_pointer_ssb,,][avg.ind,],2,mean)
 	catch.waa <- apply(mod$rep$pred_waa[dat$waa_pointer_totcatch,,][avg.ind,],2,mean)
 	M.age <- apply(mod$rep$MAA[avg.ind,],2,mean)
@@ -4882,7 +4883,7 @@ plot.tile.age.year <- function(mod, type="selAA", do.tex = FALSE, do.png = FALSE
     sel_re <- c("no","IID","AR1","AR1_y","2D AR1")[dat$selblock_models_re]
     save_df = NULL
     for(i in 1:n_selblocks) {
-      if(dat$selblock_models[i] <= 5){ # for age selex
+      if(dat$selblock_models[i] <= 6){ # for age selex
         df.selAA <- data.frame(matrix(NA, nrow=0, ncol=n_ages+2))
         colnames(df.selAA) <- c(paste0("Age_",1:n_ages),"Year","Block")
         tmp = as.data.frame(rep$selAA[[i]])
@@ -4968,7 +4969,7 @@ plot.tile.age.year <- function(mod, type="selAA", do.tex = FALSE, do.png = FALSE
     } else {
       years_full = years
     }
-    df.mLAA <- as.data.frame(rep$LAA)
+    df.mLAA <- as.data.frame(rep$jan1LAA)
     df.mLAA$Year <- years_full
     colnames(df.mLAA) <- c(paste0("Age_",1:n_ages),"Year")
     df.plot <- df.mLAA %>% tidyr::pivot_longer(-Year,

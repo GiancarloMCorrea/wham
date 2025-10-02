@@ -126,8 +126,8 @@ vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, ve
 						vector<Type> selvec = tmp.row(y);
 						for (int a = 0; a < n_ages; a++) { tmp(y,a) = tmp(y,a)/max(selvec); } // maximum 1
 						for (int a = 0; a < n_ages; a++) {
-							if( (a+1) < Age_Nodes(0) ) tmp(y,a) = p_1(0); // Use selex first node when age < first node
-							if( (a+1) > Age_Nodes(Age_Nodes.size()-1) ) tmp(y,a) = p_1(p_1.size()-1); // Use selex last node when age > last node
+							if( (a+1.0) < Age_Nodes(0) ) tmp(y,a) = p_1(0); // Use selex first node when age < first node
+							if( (a+1.0) > Age_Nodes(Age_Nodes.size()-1) ) tmp(y,a) = p_1(p_1.size()-1); // Use selex last node when age > last node
 						}
 					  }
 					} else {
@@ -207,7 +207,7 @@ vector<matrix<Type> > get_selectivity(int n_years, int n_ages, int n_lengths, ve
 	  }
 	}
 	
-    if(selblock_models(b) < 6) selAL(b) = tmp; // age selex
+    if(selblock_models(b) < 7) selAL(b) = tmp; // age selex
 	else selAL(b) = tmpL; // len selex
 	
   }
@@ -337,6 +337,7 @@ Type get_SPR_0(vector<Type> M, vector<Type> mat, vector<Type> waassb, Type fracy
   int n_ages = M.size();
   Type SPR_0 = Type(0.0);
   Type ntemp0 = Type(1.0);
+  // WHAM way to calculate NAA:
   for (int a = 0; a < n_ages - 1; a++)
   {
     SPR_0 += ntemp0 * mat(a) * waassb(a) * exp(-fracyearSSB * M(a));
@@ -1495,7 +1496,7 @@ vector<Type> get_selAA_from_selAL(matrix<Type> selAL, int y, int this_sel_model,
 	  int n_ages = dims(1);
 	  vector<Type> selAA(n_ages); // n_ages
 	  
-	  if(this_sel_model < 6) { // for age models
+	  if(this_sel_model < 7) { // for age models
 		  selAA = selAL.row(y);  // same as calculated in selAL
 	  } else { // transform for all years
 	      // Setting Eigen::SparseMatrix to phi_mat does not help here.

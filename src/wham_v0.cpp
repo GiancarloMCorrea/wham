@@ -1615,7 +1615,7 @@ Type objective_function<Type>::operator() ()
   // Selex-at-age is mandatory (for FAA calculation) even if selex-at-length is the main selectivity function
   // When transforming from selex-at-age to selex-at-length only put 1 for all length bins (placeholder)
   for(int b = 0; b < n_selblocks; b++) {
-	  if(selblock_models(b) < 6) { // for selex-at-age models
+	  if(selblock_models(b) < 7) { // for selex-at-age models
 		// selAA same as selAL (selex-at-age)
 		selAA(b) = selAL(b);  
 		// selLL = 1 (not important, just a placeholder)
@@ -1716,6 +1716,7 @@ Type objective_function<Type>::operator() ()
   pred_NAA.setZero();
   ssb_phi_mat = phi_matrix(waa_pointer_ssb-1);
   
+  // original WHAM way to calculate NAA:
   for(int a = 0; a < n_ages; a++)
   {
     if(N1_model == 0) NAA(0,a) = exp(log_N1_pars(a));
@@ -1724,7 +1725,7 @@ Type objective_function<Type>::operator() ()
       if(a==0) NAA(0,0) = exp(log_N1_pars(0));
       else
       {
-        if(a == n_ages-1) NAA(0,a) = NAA(0,a-1)/(1.0 + exp(-MAA(0,a) - exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1)));
+        if(a == n_ages-1) NAA(0,a) = NAA(0,a-1)/(1.0 - exp(-MAA(0,a) - exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1))); // replace + by - in denominator... confirm
         else NAA(0,a) = NAA(0,a-1)* exp(-MAA(0,a) -  exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1));
       }
     }
@@ -1732,6 +1733,41 @@ Type objective_function<Type>::operator() ()
 	SSB(0) += NAA(0,a) * pred_waa(waa_pointer_ssb-1,0,a) * mat_at_age(0,a) * exp(-ZAA(0,a)*fracyr_SSB(0)); 
     pred_NAA(0,a) = NAA(0,a);
   }
+  
+  // SS3 way to calculate NAA:
+  // if(N1_model == 0) { 
+	// for(int a = 0; a < n_ages; a++) NAA(0,a) = exp(log_N1_pars(a));
+  // } else { // N1_model == 1
+    // vector<Type> tmp_NAA(3*n_ages); // to save cum NAA
+	// int a1 = 0;
+	// for(int a = 0; a < (3*n_ages); a++) {
+	  // // calculate max age in loop for M and F:
+	  // if(a > (n_ages-1)) {
+		// a1 = n_ages - 1;
+	  // } else { a1 = a; }
+      // if(a==0) tmp_NAA(0) = exp(log_N1_pars(0));
+      // else
+      // {
+        // if(a == (3*n_ages-1)) tmp_NAA(a) = tmp_NAA(a-1)/(1.0 + exp(-MAA(0,a1) - exp(log_N1_pars(1)) * FAA_tot(0,a1)/FAA_tot(0,which_F_age(0)-1)));
+        // else tmp_NAA(a) = tmp_NAA(a-1)* exp(-MAA(0,a1) -  exp(log_N1_pars(1)) * FAA_tot(0,a1)/FAA_tot(0,which_F_age(0)-1));
+      // }
+	// }
+	// // Calculate cum NAA:
+	// Type cum_NAA = 0.0;
+	// for(int a = (n_ages-1); a < (3*n_ages); a++) {
+		// cum_NAA += tmp_NAA(a);
+	// }
+	// // Fill NAA matrix:
+	// for(int a = 0; a < n_ages; a++) {
+		// if(a < (n_ages-1)) NAA(0,a) = tmp_NAA(a);
+		// else NAA(0,a) = cum_NAA;
+	// }
+  // }
+  // // Calculate SSB using maturity at age:
+  // for(int a = 0; a < n_ages; a++) {
+	  // SSB(0) += NAA(0,a) * pred_waa(waa_pointer_ssb-1,0,a) * mat_at_age(0,a) * exp(-ZAA(0,a)*fracyr_SSB(0)); 
+	  // pred_NAA(0,a) = NAA(0,a);
+  // }
 
   // get SPR0
   vector<Type> M(n_ages), sel(n_ages), mat(n_ages), waassb(n_ages), log_SPR0(n_years_model + n_years_proj);
