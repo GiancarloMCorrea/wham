@@ -109,65 +109,76 @@ project_wham = function(model, proj.opts=list(n.yrs=3, use.last.F=TRUE, use.avg.
   tryCatch(input2 <- prepare_projection(model, proj.opts)
     , error = function(e) {model$err_proj <<- conditionMessage(e)})
   if("err_proj" %in% names(model)) stop(model$err_proj)
-  else{# refit model to estimate derived quantities in projection years
+  else{ # refit model to estimate derived quantities in projection years
   #if(!exists("err")) 
     #mod <- TMB::MakeADFun(input2$data, input2$par, DLL = "wham", random = input2$random, map = input2$map, silent = MakeADFun.silent)
-    mod <- fit_wham(input2, n.newton=n.newton, do.sdrep=F, do.retro=F, do.osa=F, do.check=F, do.proj=F, 
-      MakeADFun.silent = MakeADFun.silent, save.sdrep=save.sdrep, do.fit = F)
+    #mod <- fit_wham(input2, n.newton=n.newton, do.sdrep=F, do.retro=F, do.osa=F, do.check=F, do.proj=F, 
+    #  MakeADFun.silent = MakeADFun.silent, save.sdrep=save.sdrep, do.fit = F)
     
+	# New way in WHAM:
+	tryCatch(proj_mod <- TMB::MakeADFun(input2$data, input2$par, DLL = "wham", random = input2$random, map = input2$map, silent = MakeADFun.silent),
+      error = function(e) {model$err_MakeADFun <<- conditionMessage(e)})
+	  
+    if(!is.null(proj_mod$err_MakeADFun)) stop(model$err_proj)
+    proj_mod$years <- input2$years
+    proj_mod$years_full <- input2$years_full
+    proj_mod$ages.lab <- input2$ages.lab
+    proj_mod$model_name <- input2$model_name
+    proj_mod$call <- match.call()
+    proj_mod$input <- input2
+    wham_commit <- packageDescription("wham")$GithubSHA1
+    proj_mod$wham_commit <- ifelse(is.null(wham_commit), "local install", paste0("Github (timjmiller/wham@", wham_commit, ")")) 
+    wham_version <- packageDescription("wham")$Version
+    proj_mod$wham_version <- paste0(wham_version, " / ", proj_mod$wham_commit)
+    TMB_commit <- packageDescription("TMB")$GithubSHA1
+    proj_mod$TMB_commit <- ifelse(is.null(TMB_commit), "local install", paste0("Github (kaskr/adcomp@", TMB_commit, ")")) 
+    TMB_version <- packageDescription("TMB")$Version
+    proj_mod$TMB_version <- paste0(TMB_version, " / ", proj_mod$TMB_commit, ")")
+
     #If model has not been fitted (i.e., for setting up an operating model/mse), then we do not want to find the Emp. Bayes Posteriors for the random effects.
-    is.fit = !is.null(model$opt)
-    if(!is.fit) mle = model$par
+    is.fit <- !is.null(model$opt)
+    if(!is.fit) mle <- model$par
     else {
-      mle = model$opt$par
-      mod$fn(mle)
+      mle <- model$opt$par
+      proj_mod$fn(mle)
     }
-    
-    mod$rep = mod$report()
-    mod$parList <- mod$env$parList(x=mle)
-    mod <- check_FXSPR(mod)
-    #if(mod$env$data$n_fleets == 1) mod <- check_projF(mod) #projections added.																			   
-    mod <- check_projF(mod) #projections added.
+    proj_mod$marg_nll <- proj_mod$fn(mle) #to make sure it is the same as the base model
+    if(is.fit & !is.na(proj_mod$marg_nll)) if(abs(proj_mod$marg_nll - model$opt$obj)>1e-5) warning(paste0("Difference between projection model nll and base model nll is ", proj_mod$marg_nll - model$opt$obj))
+    proj_mod$rep <- proj_mod$report(proj_mod$env$last.par.best)
+    proj_mod$parList <- proj_mod$env$parList(x=mle)
+    proj_mod <- check_projF(proj_mod) #projections added.
     if(is.fit & do.sdrep) # only do sdrep if no error and the model has been previously fitted.
     {
-      mod$sdrep <- try(TMB::sdreport(mod))
-      mod$is_sdrep <- !is.character(mod$sdrep)
-      if(mod$is_sdrep) mod$na_sdrep <- any(is.na(summary(mod$sdrep,"fixed")[,2])) else mod$na_sdrep = NA
-      if(!save.sdrep) mod$sdrep <- summary(mod$sdrep) # only save summary to reduce model object size
+      if(model$is_sdrep){ #much faster than old way below
+        proj_mod$sdrep <- try(TMB::sdreport(proj_mod, par.fixed = mle, hessian.fixed = solve(model$sdrep$cov.fixed), bias.correct = TMB.bias.correct, getJointPrecision = TMB.jointPrecision))
+      } else {
+        proj_mod$sdrep <- try(TMB::sdreport(proj_mod, bias.correct = TMB.bias.correct, getJointPrecision = TMB.jointPrecision))
+      }
+      proj_mod$is_sdrep <- !is.character(proj_mod$sdrep)
+      proj_mod$na_sdrep <- ifelse(proj_mod$is_sdrep, any(is.na(summary(proj_mod$sdrep,"fixed")[,2])), NA)
+      # if(proj_mod$is_sdrep) proj_mod$na_sdrep <- any(is.na(summary(proj_mod$sdrep,"fixed")[,2])) else proj_mod$na_sdrep = NA
+      if(!save.sdrep) proj_mod$sdrep <- summary(proj_mod$sdrep) # only save summary to reduce model object size
     } else {
-      mod$is_sdrep = FALSE
-      mod$na_sdrep = NA
+      proj_mod$is_sdrep <- FALSE
+      proj_mod$na_sdrep <- NA
     }
   }
-  #assigning model$err_proj above already accomplishes this
-  #if(exists("err")){
-  #  mod <- model # if error, still pass previous/full fit
-  #  mod$err_proj <- err # store error message to print out in fit_wham
-  #  rm("err")
-  #}
+	
+	# pass along previously calculated retros, OSA residuals, error messages, and runtime
+	noproj_elements <- names(model)[!names(model) %in% names(proj_mod)] #if anything, should just be OSA.aggregate and OSA.agecomp
+  
+	proj_mod[noproj_elements] <- model[noproj_elements]
+	proj_mod[c("years","years_full","ages.lab")] <- proj_mod$input[c("years","years_full","ages.lab")]
+	proj_mod$date <- Sys.time()
+	if(!do.sdrep) proj_mod$sdrep <- NULL #remove sdrep of unprojected model
 
-  # pass along previously calculated retros, OSA residuals, error messages, and runtime
-  elements <- c("final_gradient","opt","peels","osa","err","err_retro","runtime","TMB_version","dir")
-
-  elements <- elements[which(elements %in% names(model))]
-  # print(elements)
-  mod[elements] <- model[elements]
-  #if(!is.null(model$final_gradient)) mod$final_gradient <- model$final_gradient # final_gradient
-  #if(!is.null(model$opt)) mod$opt <- model$opt # optimization results
-  #if(!is.null(model$peels)) mod$peels <- model$peels # retrospective analysis
-  #if(!is.null(model$osa)) mod$osa <- model$osa # OSA residuals
-  #if(!is.null(model$err)) mod$err <- model$err # error messages
-  #if(!is.null(model$err_retro)) mod$err_retro <- model$err_retro # error messages
-  #mod$runtime <- model$runtime # runtime (otherwise would be just for projections)
-
-  # print error message
-  if(!is.null(model$err_proj))
-  {
-    mod$err_proj <- model$err_proj
-    warning(paste("","** Error during projections. **",
-      paste0("Check for issues with proj.opts, see ?project_wham."),"",mod$err_proj,"",sep='\n'))
-  }
-  return(mod)
+	# print error message
+	if(!is.null(model$err_proj))
+	{
+		proj_mod$err_proj <- model$err_proj
+		warning(paste("","** Error during projections. **",
+		paste0("Check for issues with proj.opts, see ?project_wham."),"",mod$err_proj,"",sep='\n'))
+	}
+	return(proj_mod)
+  
 }
-
-

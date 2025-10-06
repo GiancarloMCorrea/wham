@@ -1023,7 +1023,7 @@ Type objective_function<Type>::operator() ()
 		  }
 	  } else { // proj_mat_opt == 1
 		for(int y = n_years_model; y < n_years_model + n_years_proj; y++) {		
-				mat_par(y,j) = exp(mat_a(j) + mat_re(y,j)); 
+			  mat_par(y,j) = exp(mat_a(j) + mat_re(y,j)); 
 		}
 	  }
 	}
@@ -1725,7 +1725,8 @@ Type objective_function<Type>::operator() ()
       if(a==0) NAA(0,0) = exp(log_N1_pars(0));
       else
       {
-        if(a == n_ages-1) NAA(0,a) = NAA(0,a-1)/(1.0 - exp(-MAA(0,a) - exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1))); // replace + by - in denominator... confirm
+        if(a == n_ages-1) NAA(0,a) = NAA(0,a-1)/(1.0 - exp(-MAA(0,a) - exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1))); 
+		// we replaced + by - in denominator above... confirm
         else NAA(0,a) = NAA(0,a-1)* exp(-MAA(0,a) -  exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1));
       }
     }
@@ -2666,6 +2667,7 @@ Type objective_function<Type>::operator() ()
   REPORT(SDAA);
   REPORT(LAA_par); 
   REPORT(WAA_par); 
+  REPORT(mat_par); 
   REPORT(pred_NAA);
   REPORT(SSB);
   REPORT(selAL);

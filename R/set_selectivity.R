@@ -203,14 +203,14 @@ set_selectivity = function(input, selectivity)
   data$selpars_est[data$selpars_est == -1] = 0
   data$n_selpars_est <- apply(data$selpars_est > 0, 1, sum)
   selpars_lo = selpars_hi = matrix(0, data$n_selblocks, data$n_ages + 20 + N_Age_Nodes + N_Len_Nodes)
-  selpars_lo[,data$n_ages + 8:12] = -20 
+  selpars_lo[,data$n_ages + 8:12] = -15 
   selpars_lo[,data$n_ages + N_Age_Nodes + c(13,15)] = min(data$lengths) 
-  selpars_lo[,data$n_ages + N_Age_Nodes + 16:20] = -20 
+  selpars_lo[,data$n_ages + N_Age_Nodes + 16:20] = -15 
   selpars_hi[,1:data$n_ages] = 1
   selpars_hi[,data$n_ages + 1:7] = data$n_ages
-  selpars_hi[,data$n_ages + 8:12] = 11 
+  selpars_hi[,data$n_ages + 8:12] = 10 
   selpars_hi[,data$n_ages + N_Age_Nodes + 13:15] = max(data$lengths) 
-  selpars_hi[,data$n_ages + N_Age_Nodes + 16:20] = 11 
+  selpars_hi[,data$n_ages + N_Age_Nodes + 16:20] = 10 
   # Maximum value for splines:
   selpars_hi[,data$n_ages + c(13:(N_Age_Nodes+12), (N_Age_Nodes+21):(N_Age_Nodes+N_Len_Nodes+20))] = 1 # makes sense? test it
 

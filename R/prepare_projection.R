@@ -45,7 +45,8 @@
 #'
 prepare_projection = function(model, proj.opts)
 {
-  if(is.null(proj.opts)) proj.opts=list(n.yrs=3, use.last.F=TRUE, use.avg.F=FALSE, use.FXSPR=FALSE, use.FMSY=FALSE, proj.F=NULL, proj.catch=NULL, avg.yrs=NULL,
+  if(is.null(proj.opts)) proj.opts=list(n.yrs=3, use.last.F=TRUE, use.avg.F=FALSE, use.FXSPR=FALSE, use.FMSY=FALSE, proj.F=NULL, 
+									    proj.catch=NULL, avg.yrs=NULL,
                                        cont.ecov=TRUE, use.last.ecov=FALSE, avg.ecov.yrs=NULL, proj.ecov=NULL, cont.Mre=NULL, 
                                        cont.LAA.re=NULL, cont.mat.re=NULL, cont.WAA.re=NULL, 
                                        avg.rec.yrs=NULL, percentFXSPR=100,
