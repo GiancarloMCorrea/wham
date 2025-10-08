@@ -1741,7 +1741,6 @@ Type objective_function<Type>::operator() ()
       else
       {
         if(a == n_ages-1) NAA(0,a) = NAA(0,a-1)/(1.0 - exp(-MAA(0,a) - exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1))); 
-		// we replaced + by - in denominator above... confirm
         else NAA(0,a) = NAA(0,a-1)* exp(-MAA(0,a) -  exp(log_N1_pars(1)) * FAA_tot(0,a)/FAA_tot(0,which_F_age(0)-1));
       }
     }
@@ -2595,8 +2594,9 @@ Type objective_function<Type>::operator() ()
     int n = 10;
     vector<Type> log_FMSY(n_years_model + n_years_proj), log_FMSY_i(1);
     matrix<Type> log_FMSY_iter(n_years_model + n_years_proj,n);
+	matrix<Type> selmat(n_fleets,n_ages);
     vector<Type> log_YPR_MSY(n_years_model + n_years_proj), log_SPR_MSY(n_years_model + n_years_proj), log_R_MSY(n_years_model + n_years_proj);
-    vector<Type> waacatch_MSY(n_ages);
+    matrix<Type> waacatch_MSY(n_fleets,n_ages);
     Type SR_a, SR_b;
     for(int y = 0; y < n_years_model + n_years_proj; y++)
     {
@@ -2604,16 +2604,16 @@ Type objective_function<Type>::operator() ()
       for(int a = 0; a < n_ages; a++)
       {
         M(a) = MAA(y,a);
-        sel(a) = FAA_tot(y,a)/FAA_tot(y,which_F_age(y)-1); //have to look at FAA_tot to see where max F is.
+		for(int f = 0; f< n_fleets; f++) selmat(f,a) = FAA(y,f,a)/FAA_tot(y,which_F_age(y)-1); //have to look at FAA_tot to see where max F is.
         waassb(a) = pred_waa(waa_pointer_ssb-1,y,a);
-        waacatch_MSY(a) = pred_waa(waa_pointer_totcatch-1, y, a);
+		for(int f = 0; f< n_fleets; f++) waacatch_MSY(f,a) = pred_waa(waa_pointer_totcatch-1, y, a);
         mat(a) = mat_at_age(y,a);
       }
       SR_a = exp(log_SR_a(y));
       SR_b = exp(log_SR_b(y));
       if(recruit_model == 3) //Beverton-Holt selected
       {
-        sr_yield<Type> sryield(SR_a, SR_b, M, sel, mat, waassb, waacatch_MSY,fracyr_SSB(y),0);
+        sr_yield_fleet<Type> sryield(SR_a, SR_b, M, selmat, mat, waassb, waacatch_MSY, fracyr_SSB(y),0);
         for (int i=0; i<n-1; i++)
         {
           log_FMSY_i(0) = log_FMSY_iter(y,i);
@@ -2624,7 +2624,7 @@ Type objective_function<Type>::operator() ()
       }
       else //Ricker selected
       {
-        sr_yield<Type> sryield(SR_a, SR_b, M, sel, mat, waassb, waacatch_MSY,fracyr_SSB(y),1);
+        sr_yield_fleet<Type> sryield(SR_a, SR_b, M, selmat, mat, waassb, waacatch_MSY,fracyr_SSB(y),1);
         for (int i=0; i<n-1; i++)
         {
           log_FMSY_i(0) = log_FMSY_iter(y,i);
@@ -2634,8 +2634,8 @@ Type objective_function<Type>::operator() ()
         }
       }
       log_FMSY(y) = log_FMSY_iter(y,n-1);
-      log_SPR_MSY(y) = log(get_SPR(log_FMSY(y), M, sel, mat, waassb, fracyr_SSB(y)));
-      log_YPR_MSY(y) = log(get_YPR(log_FMSY(y), M, sel, waacatch_MSY));
+      log_SPR_MSY(y) = log(get_SPR(log_FMSY(y), M, selmat, mat, waassb, fracyr_SSB(y)));
+      log_YPR_MSY(y) = log(get_YPR(log_FMSY(y), M, selmat, waacatch_MSY));
       if(recruit_model == 3) log_R_MSY(y) = log((SR_a - 1/exp(log_SPR_MSY(y))) / SR_b); //bh
       else log_R_MSY(y) = log(log(SR_a) + log_SPR_MSY(y)) - log(SR_b) - log_SPR_MSY(y); //ricker
     }

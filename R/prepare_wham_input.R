@@ -613,7 +613,9 @@ initial_input_fn = function(input, basic_info){
   if(!is.null(basic_info$simulate_process_error)) input$data$simulate_state = basic_info$simulate_process_error
   if(!is.null(basic_info$simulate_observation_error)) input$data$simulate_data = basic_info$simulate_observation_error
   if(!is.null(basic_info$simulate_period)) input$data$simulate_period = basic_info$simulate_period
-
+  if(!is.null(basic_info$FMSY_init)) input$data$FMSY_init = basic_info$FMSY_init
+  if(!is.null(basic_info$FXSPR_init)) input$data$FXSPR_init = basic_info$FXSPR_init
+  
   if(!is.null(basic_info$percentSPR)) input$data$percentSPR = basic_info$percentSPR
   if(!is.null(basic_info$percentFXSPR)) input$data$percentFXSPR = basic_info$percentFXSPR
   if(!is.null(basic_info$percentFMSY)) input$data$percentFMSY = basic_info$percentFMSY

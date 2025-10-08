@@ -427,24 +427,33 @@ struct sr_yield_fleet {
 
   template <typename T> //I think this allows you to differentiate the function wrt whatever is after operator() on line below
   T operator()(vector<T> log_F) { //find such that it maximizes yield
-    int n_ages = M.size();
-    int n_fleets = sel.rows();
-    T YPR = 0, SPR = 0, ntemp = 1, R;
+    // int n_ages = M.size();
+    // int n_fleets = sel.rows();
+    // T YPR = 0, SPR = 0, ntemp = 1, R;
+    T R;
+    vector<T> MT = M.template cast<T>();
+    vector<T> matT = mat.template cast<T>();
+    vector<T> waassbT = waassb.template cast<T>();
+    matrix<T> waacatchT = waacatch.template cast<T>();
+    T fracyearSSBT = T(fracyearSSB);
     vector<T> Z = M.template cast<T>();
 
-    matrix<T> F = exp(log_F(0)) * sel.template cast<T>();
+    matrix<T> selT = sel.template cast<T>();
+    // matrix<T> F = exp(log_F(0)) * selT;
     //Z = F + M.template cast<T>();
-    for(int age=0; age<n_ages; age++) for(int f = 0; f < n_fleets; f++) Z(age) += F(f,age);
-    for(int age=0; age<n_ages-1; age++) {
-      for(int f = 0; f < n_fleets; f++) YPR += ntemp * F(f,age) * T(waacatch(f,age)) * (1- exp(-Z(age)))/Z(age);
-      SPR += ntemp * T(mat(age) * waassb(age)) * exp(-T(fracyearSSB) * Z(age));
-      ntemp *= exp(-Z(age));
-    }
-    ntemp /= 1 - exp(-Z(n_ages-1));
-    for(int f = 0; f < n_fleets; f++) YPR += ntemp * F(f,n_ages-1) * T(waacatch(f,n_ages-1)) * (1 - exp(-Z(n_ages-1)))/Z(n_ages-1);
-    SPR += ntemp * T(mat(n_ages-1) * waassb(n_ages-1)) * exp(-T(fracyearSSB)*Z(n_ages-1));
+    // for(int age=0; age<n_ages; age++) for(int f = 0; f < n_fleets; f++) Z(age) += F(f,age);
+    // for(int age=0; age<n_ages-1; age++) {
+    //   for(int f = 0; f < n_fleets; f++) YPR += ntemp * F(f,age) * T(waacatch(f,age)) * (1- exp(-Z(age)))/Z(age);
+    //   SPR += ntemp * T(mat(age) * waassb(age)) * exp(-T(fracyearSSB) * Z(age));
+    //   ntemp *= exp(-Z(age));
+    // }
+    // ntemp /= 1 - exp(-Z(n_ages-1));
+    // for(int f = 0; f < n_fleets; f++) YPR += ntemp * F(f,n_ages-1) * T(waacatch(f,n_ages-1)) * (1 - exp(-Z(n_ages-1)))/Z(n_ages-1);
+    // SPR += ntemp * T(mat(n_ages-1) * waassb(n_ages-1)) * exp(-T(fracyearSSB)*Z(n_ages-1));
 
-    //Type SPR = get_SPR(x, M, sel, mat, waassb, fracyearSSB);
+    T SPR = get_SPR(log_F(0), MT, selT, matT, waassbT, fracyearSSBT);
+    T YPR = get_YPR(log_F(0), MT, selT, waacatchT);
+
     if(sr_type == 0) R = (T(SR_a) - 1/SPR) / T(SR_b); //beverton-holt
     if(sr_type == 1) R = log(T(SR_a) * SPR)/(T(SR_b) * SPR); //ricker
     T Y = YPR * R;
@@ -848,7 +857,7 @@ Type get_FMSY(Type log_a, Type log_b, vector<Type> M, matrix<Type> sel, matrix<T
   Type b = exp(log_b);
   int sr_type = 0; //recruit_model = 3, B-H
   if(recruit_model == 4) sr_type = 1; //recruit_model = 4, Ricker
-  sr_yield<Type> sryield(a, b, M, sel, mat, waassb, waacatch, fracyr_SSB, sr_type);
+  sr_yield_fleet<Type> sryield(a, b, M, sel, mat, waassb, waacatch, fracyr_SSB, sr_type);
   for (int i=0; i<n-1; i++)
   {
     log_FMSY_i(0) = log_FMSY_iter(i);

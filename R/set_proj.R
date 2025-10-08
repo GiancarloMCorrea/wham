@@ -1,6 +1,7 @@
 set_proj = function(input, proj.opts = NULL)
 {
 	data = input$data
+
 	if(is.null(proj.opts))
 	{
 	  data$do_proj <- 0
@@ -15,8 +16,8 @@ set_proj = function(input, proj.opts = NULL)
 	  data$proj_mat_opt <- rep(0, times = data$n_mat_par)
 	  data$logR_mean <- 0 # only used for SCAA projections
 	  data$logR_sd <- 0 # only used for SCAA projections
-	  data$FXSPR_init = rep(0.1, data$n_years_model + data$n_years_proj)
-	  data$FMSY_init = rep(0.1, data$n_years_model + data$n_years_proj)
+	  #data$FXSPR_init = rep(0.1, data$n_years_model + data$n_years_proj)
+	  #data$FMSY_init = rep(0.001, data$n_years_model + data$n_years_proj)
 	  data$F_proj_init = 0
 	}
 	else {
@@ -25,6 +26,11 @@ set_proj = function(input, proj.opts = NULL)
 		#prepare_projection requires a model object returned by fit_wham
 
 	}
+	
+    # To be able to input Fmsy init
+    if(is.null(data$FMSY_init)) data$FMSY_init = rep(0.1, data$n_years_model + data$n_years_proj)
+    if(is.null(data$FXSPR_init)) data$FXSPR_init = rep(0.1, data$n_years_model + data$n_years_proj)
+
 	input$data = data
 	return(input)
 }
