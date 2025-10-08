@@ -709,14 +709,17 @@ Type objective_function<Type>::operator() ()
   
   } // Loop number of RE dim
   
-	if(do_post_samp.sum()==0){
-		ADREPORT(sigma_LAA);
-		ADREPORT(rho_LAA_a);
-		ADREPORT(rho_LAA_y);
-		ADREPORT(prho_LAA_a);
-		ADREPORT(prho_LAA_y);
-		ADREPORT(prho_LAA_c);
-	}
+  // OFF_ADREP
+  // For some reason I never carefully explored, these lines below cause fatal error when running sdreport and compiling using TMBad
+  // Comment these temporarily
+	// if(do_post_samp.sum()==0){
+		// ADREPORT(sigma_LAA);
+		// ADREPORT(rho_LAA_a);
+		// ADREPORT(rho_LAA_y);
+		// ADREPORT(prho_LAA_a);
+		// ADREPORT(prho_LAA_y);
+		// ADREPORT(prho_LAA_c);
+	// }
 				
   // Report quantities:
   REPORT(nll_LAA);
@@ -820,14 +823,17 @@ Type objective_function<Type>::operator() ()
   
   } // If W parametric
   
-	if(do_post_samp.sum()==0){
-		ADREPORT(sigma_WAA);
-		ADREPORT(rho_WAA_a);
-		ADREPORT(rho_WAA_y);
-		ADREPORT(prho_WAA_a);
-		ADREPORT(prho_WAA_y);
-		ADREPORT(prho_WAA_c);
-	}
+  // OFF_ADREP
+  // For some reason I never carefully explored, these lines below cause fatal error when running sdreport and compiling using TMBad
+  // Comment these temporarily
+	// if(do_post_samp.sum()==0){
+		// ADREPORT(sigma_WAA);
+		// ADREPORT(rho_WAA_a);
+		// ADREPORT(rho_WAA_y);
+		// ADREPORT(prho_WAA_a);
+		// ADREPORT(prho_WAA_y);
+		// ADREPORT(prho_WAA_c);
+	// }
 				
   // Report quantities:
   REPORT(nll_WAA);
@@ -870,10 +876,13 @@ Type objective_function<Type>::operator() ()
 				  }
 				}
 
-			if(do_post_samp.sum()==0){
-			  ADREPORT(sigma_mat);
-			  ADREPORT(rho_mat_y);
-			}
+		  // OFF_ADREP
+		  // For some reason I never carefully explored, these lines below cause fatal error when running sdreport and compiling using TMBad
+		  // Comment these temporarily
+			// if(do_post_samp.sum()==0){
+			  // ADREPORT(sigma_mat);
+			  // ADREPORT(rho_mat_y);
+			// }
 			
 		  }
 	  
@@ -1086,7 +1095,10 @@ Type objective_function<Type>::operator() ()
 		
   } // loop year
 
-  if(do_post_samp.sum()==0) if(isW_parametric == 1) ADREPORT(jan1LAA);// only when LAA is relevant
+  // OFF_ADREP
+  // For some reason I never carefully explored, these lines below cause fatal error when running sdreport and compiling using TMBad
+  // Comment these temporarily
+  // if(do_post_samp.sum()==0) if(isW_parametric == 1) ADREPORT(jan1LAA);// only when LAA is relevant
 
   // --------------------------------------------------------------------------
   // Calculate phi matrix jan1 constructed from fixed effects (ignores random effects)
@@ -1397,7 +1409,10 @@ Type objective_function<Type>::operator() ()
   } // else isW_parametric
   REPORT(pred_waa);	
   REPORT(nll_waa);
-  if(do_post_samp.sum()==0) if(isW_parametric == 1) ADREPORT(pred_waa); // If smoothing the WAA matrix get SEs
+  // OFF_ADREP
+  // For some reason I never carefully explored, these lines below cause fatal error when running sdreport and compiling using TMBad
+  // Comment these temporarily
+  // if(do_post_samp.sum()==0) if(isW_parametric == 1) ADREPORT(pred_waa); // If smoothing the WAA matrix get SEs
   SIMULATE if(simulate_data(0) == 1) if(simulate_period(0) == 1) REPORT(waa); // fisheries
   SIMULATE if(simulate_data(1) == 1) if(simulate_period(0) == 1) REPORT(waa); // indices
   SIMULATE if(simulate_data(0) == 1) if(simulate_period(1) == 1) REPORT(waa_proj); // fisheries
