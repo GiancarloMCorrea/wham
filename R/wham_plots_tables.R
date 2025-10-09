@@ -1301,7 +1301,7 @@ plot.fleet.stdresids.fn = function(mod, years, fleet.names = NULL, do.tex = FALS
   # return(ggp)
 }
 
-plot.catch.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od)
+plot.catch.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years <- mod$years
@@ -1314,6 +1314,8 @@ plot.catch.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", 
   log_stdres = (log(catch) - pred_log_catch[1:length(years),])/sigma # cpp already bias-corrects if bias_correct_oe = 1
   if(!missing(use.i)) fleets <- use.i
   else fleets <- 1:dat$n_fleets
+  
+  if(is.null(labels_i)) labels_i = fleets
   if(missing(plot.colors)) plot.colors = mypalette(dat$n_fleets)
 	for (i in fleets)
 	{
@@ -1337,7 +1339,7 @@ plot.catch.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", 
 		points(years, log(catch[,i]), pch=1, col=plot.colors[i])
     if(mod$env$data$n_fleets == 1) abline(v=tail(years,1), lty=2, lwd=1)
 		arrows(years, log.ob.min, years, log.ob.max, length=0)
-		title (paste0("Fleet ",i, " Catch"), outer=T, line=-1)
+		title (paste0("Fleet ",labels_i[i], " Catch"), outer=T, line=-1)
 		plot(years, log_stdres[,i], type='h', lwd=2, col=plot.colors[i], xlab="Year", ylab="Log-scale Std. Residual")
 		abline(h=0)
 		hist(log_stdres[,i], plot=T, xlab="Std. Residual", ylab="Probability Density", freq=F, main=NULL)
@@ -1345,7 +1347,7 @@ plot.catch.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", 
 	}
 }
 
-plot.index.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od)
+plot.index.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years <- mod$years
@@ -1358,6 +1360,8 @@ plot.index.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", 
   log_stdres = (log(index)-log(pred_index))/sigma
   if(!missing(use.i)) indices <- use.i
   else indices <- 1:dat$n_indices
+  
+  if(is.null(labels_i)) labels_i = indices
   if(missing(plot.colors)) plot.colors = mypalette(dat$n_indices)
 	for (i in indices)
 	{
@@ -1374,7 +1378,7 @@ plot.index.4.panel <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", 
 		plot(years, log(index[,i]), type='p', col=plot.colors[i], pch=1, xlab="Year", ylab="Ln(Index)", ylim=c(y.min, y.max))
 		lines(years, log(pred_index[,i]), col=plot.colors[i], lwd=2)
 		arrows(years, log.ob.min, years, log.ob.max, length=0)
-		title (paste0("Index ",i), outer=T, line=-1)
+		title (paste0("Index ",labels_i[i]), outer=T, line=-1)
 		plot(years, log_stdres[,i], type='h', lwd=2, col=plot.colors[i], xlab="Year", ylab="Log-scale Std. Residual")
 		abline(h=0)
 		hist(log_stdres[,i], plot=T, xlab="Std. Residual", ylab="Probability Density", freq=F, main=NULL)
@@ -1453,7 +1457,7 @@ plot.NAA.res <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 
   # par(origpar)
 }
 
-plot.catch.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od)
+plot.catch.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
@@ -1461,6 +1465,8 @@ plot.catch.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
   ages.lab = mod$ages.lab
   if(!missing(use.i)) fleets <- use.i
   else fleets <- 1:mod$env$data$n_fleets
+  
+  if(is.null(labels_i)) labels_i = fleets
   if(missing(plot.colors)) plot.colors = mypalette(mod$env$data$n_fleets)
 
 	for (i in fleets)
@@ -1473,7 +1479,7 @@ plot.catch.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
       if(do.png) png(filename = file.path(od, paste0("Catch_age_comp_fleet_",i,'.png')), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
       y_max = max(c(as.vector(acomp.obs), as.vector(acomp.pred))) * 1.05
       par(mar=c(1,1,2,1), oma=c(4,4,2,1), mfcol=c(5,3))
-      my.title <- paste0("Fleet ", i)
+      my.title <- paste0("Fleet ", labels_i[i])
       for (j in 1:length(years))
       {
         if(mod$env$data$use_catch_paa[j,i] > 0) {
@@ -1511,7 +1517,7 @@ plot.catch.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
   # par(origpar)
 }
 
-plot.catch.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od)
+plot.catch.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
@@ -1520,6 +1526,8 @@ plot.catch.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
   lengths.lab[seq(from = 1, to = mod$env$data$n_lengths, by = 10)] = mod$env$data$lengths[seq(from = 1, to = mod$env$data$n_lengths, by = 10)]
   if(!missing(use.i)) fleets <- use.i
   else fleets <- 1:mod$env$data$n_fleets
+  
+  if(is.null(labels_i)) labels_i = fleets
   if(missing(plot.colors)) plot.colors = mypalette(mod$env$data$n_fleets)
 
   for (i in fleets)
@@ -1532,7 +1540,7 @@ plot.catch.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
       if(do.png) png(filename = file.path(od, paste0("Catch_len_comp_fleet_",i,'.png')), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
       y_max = max(c(as.vector(lcomp.obs), as.vector(lcomp.pred))) * 1.05
       par(mar=c(1,1,2,1), oma=c(4,4,2,1), mfcol=c(5,3))
-      my.title <- paste0("Fleet ", i)
+      my.title <- paste0("Fleet ", labels_i[i])
       for (j in 1:length(years))
       {
         if(mod$env$data$use_catch_pal[j,i] > 0) {
@@ -1572,7 +1580,7 @@ plot.catch.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
 
 
 
-plot.index.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od)
+plot.index.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
@@ -1580,6 +1588,8 @@ plot.index.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
   ages.lab = mod$ages.lab
   if(!missing(use.i)) indices <- use.i
   else indices <- 1:mod$env$data$n_indices
+  
+  if(is.null(labels_i)) labels_i = indices
   if(missing(plot.colors)) plot.colors = mypalette(mod$env$data$n_indices)
 
 	for (i in indices)
@@ -1593,7 +1603,7 @@ plot.index.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
       if(do.png) png(filename = file.path(od, paste0("Catch_age_comp_index_",i,'.png')), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
       y_max = max(c(as.vector(acomp.obs), as.vector(acomp.pred))) * 1.05
       par(mar=c(1,1,2,1), oma=c(4,4,2,1), mfcol=c(5,3))
-      my.title <- paste0("Index ", i)
+      my.title <- paste0("Index ", labels_i[i])
       for (j in 1:length(years))
       {
         if(mod$env$data$use_index_paa[j,i] > 0) {
@@ -1631,7 +1641,7 @@ plot.index.age.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
   # par(origpar)
 }
 
-plot.index.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od)
+plot.index.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, use.i, plot.colors, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
@@ -1640,6 +1650,8 @@ plot.index.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
   lengths.lab[seq(from = 1, to = mod$env$data$n_lengths, by = 10)] = mod$env$data$lengths[seq(from = 1, to = mod$env$data$n_lengths, by = 10)]
   if(!missing(use.i)) indices <- use.i
   else indices <- 1:mod$env$data$n_indices
+  
+  if(is.null(labels_i)) labels_i = indices
   if(missing(plot.colors)) plot.colors = mypalette(mod$env$data$n_indices)
 
   for (i in indices)
@@ -1653,7 +1665,7 @@ plot.index.len.comp <- function(mod, do.tex = FALSE, do.png = FALSE, fontfam="",
       if(do.png) png(filename = file.path(od, paste0("Index_len_comp_index_",i,'.png')), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
       y_max = max(c(as.vector(lcomp.obs), as.vector(lcomp.pred))) * 1.05
       par(mar=c(1,1,2,1), oma=c(4,4,2,1), mfcol=c(5,3))
-      my.title <- paste0("Index ", i)
+      my.title <- paste0("Index ", labels_i[i])
       for (j in 1:length(years))
       {
         if(mod$env$data$use_index_pal[j,i] > 0) {
@@ -1706,7 +1718,7 @@ multinomial.pearson.fn = function(mod, ind = 1)
 #mean(x < 0, na.rm = TRUE)
 
 plot.catch.age.comp.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 = 2, pos.resid.col = "#ffffffaa", neg.resid.col = "#8c8c8caa",
-                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa = FALSE, use.i, od)
+                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa = FALSE, use.i, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -1717,6 +1729,8 @@ plot.catch.age.comp.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 
 	nyrs <- length(years)
 	if(!missing(use.i)) fleets <- use.i
 	else fleets <- 1:mod$env$data$n_fleets
+	
+	if(is.null(labels_i)) labels_i = fleets
   tylab <- "Year"
 
 	for (i in fleets)
@@ -1781,7 +1795,7 @@ plot.catch.age.comp.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 
       legend("topright", xpd=T, legend=bubble.legend1, pch=rep(1, 3), pt.cex=bubble.legend2, horiz=T , col='black')
       legend("topleft", xpd=T, legend=c("Neg.", "Pos."), pch=rep(21, 2), pt.cex=3, horiz=T, pt.bg=c(neg.resid.col, pos.resid.col), col="black")
       legend("top", xpd = TRUE, legend = paste("Max(resid)=",round(range.resids[2],2), sep=""), horiz = TRUE)
-      title (paste0(my.title,i), outer=T, line=-1)
+      title (paste0(my.title,labels_i[i]), outer=T, line=-1)
       if(do.tex | do.png) dev.off() else par(origpar)
     }
 	}   #end loop n_fleets
@@ -1903,7 +1917,7 @@ plot.waa.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 = 0.25, pos
 
 
 plot.catch.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col = "#ffffffaa", neg.resid.col = "#8c8c8caa",
-                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa = FALSE, use.i, od)
+                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa = FALSE, use.i, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -1915,6 +1929,8 @@ plot.catch.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.c
   nyrs <- length(years)
   if(!missing(use.i)) fleets <- use.i
   else fleets <- 1:mod$env$data$n_fleets
+  
+  if(is.null(labels_i)) labels_i = fleets
   tylab <- "Year"
 
   for (i in fleets)
@@ -1979,7 +1995,7 @@ plot.catch.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.c
       legend("topright", xpd=T, legend=bubble.legend1, pch=rep(1, 3), pt.cex=bubble.legend2, horiz=T , col='black')
       legend("topleft", xpd=T, legend=c("Neg.", "Pos."), pch=rep(21, 2), pt.cex=3, horiz=T, pt.bg=c(neg.resid.col, pos.resid.col), col="black")
       legend("top", xpd = TRUE, legend = paste("Max(resid)=",round(range.resids[2],2), sep=""), horiz = TRUE)
-      title (paste0(my.title,i), outer=T, line=-1)
+      title (paste0(my.title,labels_i[i]), outer=T, line=-1)
       if(do.tex | do.png) dev.off() else par(origpar)
     }
   }   #end loop n_fleets
@@ -1987,7 +2003,7 @@ plot.catch.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.c
 }
 
 plot.catch.caal.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col = "#ffffffaa", neg.resid.col = "#8c8c8caa",
-                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa = FALSE, use.i, od)
+                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa = FALSE, use.i, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -2002,6 +2018,8 @@ plot.catch.caal.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col =
   nyrs <- length(years)
   if(!missing(use.i)) fleets <- use.i
   else fleets <- 1:mod$env$data$n_fleets
+  
+  if(is.null(labels_i)) labels_i = fleets
   tylab <- "Year"
 
   for (i in fleets)
@@ -2071,7 +2089,7 @@ plot.catch.caal.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col =
           legend("topright", xpd=T, legend=bubble.legend1, pch=rep(1, 2), pt.cex=bubble.legend2, horiz=T , col='black')
           legend("topleft", xpd=T, legend=c("Neg.", "Pos."), pch=rep(21, 2), pt.cex=3, horiz=T, pt.bg=c(neg.resid.col, pos.resid.col), col="black")
           legend("top", xpd = TRUE, legend = paste("Max(resid)=",round(range.resids[2],2), sep=""), horiz = TRUE)
-          title (paste0(my.title,i, ' Year ', years[y]), outer=T, line=-1)
+          title (paste0(my.title,labels_i[i], ' Year ', years[y]), outer=T, line=-1)
           if(do.tex | do.png) dev.off() else par(origpar)
       }
     }
@@ -2081,7 +2099,7 @@ plot.catch.caal.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col =
 
 
 plot.index.age.comp.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 = 2, pos.resid.col = "#ffffffaa", neg.resid.col = "#8c8c8caa",
-                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa=FALSE, use.i, od)
+                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa=FALSE, use.i, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -2093,6 +2111,7 @@ plot.index.age.comp.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 
 	if(!missing(use.i)) indices <- use.i
 	else indices <- 1:dat$n_indices
 
+	if(is.null(labels_i)) labels_i = indices
 	for (i in indices)
 	{
     yind = which(dat$use_index_paa[,i] ==1)
@@ -2157,7 +2176,7 @@ plot.index.age.comp.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 
       legend("topright", xpd=T, legend=bubble.legend1, pch=rep(1, 3), pt.cex=bubble.legend2, horiz=T , col='black')
       legend("topleft", xpd=T, legend=c("Neg.", "Pos."), pch=rep(21, 2), pt.cex=3, horiz=T, pt.bg=c(neg.resid.col, pos.resid.col), col="black")
       legend("top", xpd = TRUE, legend = paste("Max(resid)=",round(range.resids[2],2), sep=""), horiz = TRUE)
-      title (paste0(my.title,i), outer=T, line=-1)
+      title (paste0(my.title,labels_i[i]), outer=T, line=-1)
       if(do.tex | do.png) dev.off() else par(origpar)
     }
 	}   #end loop n_fleets
@@ -2165,7 +2184,7 @@ plot.index.age.comp.resids <- function(mod, ages, ages.lab, scale.catch.bubble2 
 }
 
 plot.index.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col = "#ffffffaa", neg.resid.col = "#8c8c8caa",
-                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa=FALSE, use.i, od)
+                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa=FALSE, use.i, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -2178,6 +2197,7 @@ plot.index.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.c
   if(!missing(use.i)) indices <- use.i
   else indices <- 1:dat$n_indices
 
+	if(is.null(labels_i)) labels_i = indices
   for (i in indices)
   {
     yind = which(dat$use_index_pal[,i] ==1)
@@ -2242,7 +2262,7 @@ plot.index.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.c
       legend("topright", xpd=T, legend=bubble.legend1, pch=rep(1, 3), pt.cex=bubble.legend2, horiz=T , col='black')
       legend("topleft", xpd=T, legend=c("Neg.", "Pos."), pch=rep(21, 2), pt.cex=3, horiz=T, pt.bg=c(neg.resid.col, pos.resid.col), col="black")
       legend("top", xpd = TRUE, legend = paste("Max(resid)=",round(range.resids[2],2), sep=""), horiz = TRUE)
-      title (paste0(my.title,i), outer=T, line=-1)
+      title (paste0(my.title,labels_i[i]), outer=T, line=-1)
       if(do.tex | do.png) dev.off() else par(origpar)
     }
   }   #end loop n_fleets
@@ -2250,7 +2270,7 @@ plot.index.len.comp.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.c
 }
 
 plot.index.caal.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col = "#ffffffaa", neg.resid.col = "#8c8c8caa",
-                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa=FALSE, use.i, od)
+                                       do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, osa=FALSE, use.i, od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -2266,6 +2286,7 @@ plot.index.caal.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col =
   if(!missing(use.i)) indices <- use.i
   else indices <- 1:dat$n_indices
 
+  if(is.null(labels_i)) labels_i = indices
   for (i in indices)
   {
     for(y in seq_along(years)) {
@@ -2335,7 +2356,7 @@ plot.index.caal.resids <- function(mod, scale.catch.bubble2 = 2, pos.resid.col =
         legend("topright", xpd=T, legend=bubble.legend1, pch=rep(1, 2), pt.cex=bubble.legend2, horiz=T , col='black')
         legend("topleft", xpd=T, legend=c("Neg.", "Pos."), pch=rep(21, 2), pt.cex=3, horiz=T, pt.bg=c(neg.resid.col, pos.resid.col), col="black")
         legend("top", xpd = TRUE, legend = paste("Max(resid)=",round(range.resids[2],2), sep=""), horiz = TRUE)
-        title (paste0(my.title,i,' Year ', years[y]), outer=T, line=-1)
+        title (paste0(my.title,labels_i[i],' Year ', years[y]), outer=T, line=-1)
         if(do.tex | do.png) dev.off() else par(origpar)
       }
     }
@@ -2963,7 +2984,7 @@ plot.M <- function(mod, ages, ages.lab, alpha = 0.05, plot.colors)
 
 #------------------------------------
 #--------Data Plots------------------
-plot.catch.by.fleet <- function(mod, units = "mt", plot.colors, fleet.labels)
+plot.catch.by.fleet <- function(mod, units = "mt", plot.colors, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -2971,13 +2992,13 @@ plot.catch.by.fleet <- function(mod, units = "mt", plot.colors, fleet.labels)
   nyrs = length(years)
   catch.obs <- dat$agg_catch
   n_fleets <- dat$n_fleets
-  if(is.null(fleet.labels)) fleet.labels = paste0('Fleet ', 1:n_fleets)
+  if(is.null(labels_i)) labels_i = paste0('Fleet ', 1:n_fleets)
   if (n_fleets > 1) par(mfrow = c(2,1))
   else par(mfrow = c(1,1))
   if(missing(plot.colors)) plot.colors = mypalette(n_fleets)
 	barplot(t(catch.obs), xlab="Year", ylab= paste0("Catch (", units, ")"), ylim=c(0,1.1*max(apply(catch.obs,1,sum))), col=plot.colors,space=0)
 	axis(side=1, at = seq(2,nyrs,2)-0.5, labels = years[seq(2,nyrs,2)], cex=0.75)
-	legend('top', legend=fleet.labels, horiz=TRUE, pch=15, col=plot.colors)
+	legend('top', legend=labels_i, horiz=TRUE, pch=15, col=plot.colors)
 	box(lwd = 2)
 	if (n_fleets > 1)
   {
@@ -2986,14 +3007,14 @@ plot.catch.by.fleet <- function(mod, units = "mt", plot.colors, fleet.labels)
 	barplot(t(catch.prop), xlab="Year", ylab="Proportion of Catch", ylim=c(0,1.1), col=plot.colors, space=0)
     axis(side=1, las=2, at = seq(2,nyrs,2)-0.5, labels = years[seq(2,nyrs,2)], cex=0.75, las=2)
     box(lwd = 2)
-		legend('top', legend=fleet.labels, horiz=TRUE, pch=15, col=plot.colors)
+		legend('top', legend=labels_i, horiz=TRUE, pch=15, col=plot.colors)
 	}
 	par(origpar)
 }
 
 # Bubble plots of catch age comps (set is.catch.flag to False to plot Discard age comps)
 plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, 
-										fontfam="", od, fleet.labels)
+										fontfam="", od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3003,8 +3024,8 @@ plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
   if(missing(ages.lab)) ages.lab = mod$ages.lab
   n_ages = length(ages)
   n_fleets = dat$n_fleets
-  if(is.null(fleet.labels)) lab_f = i
-  else lab_f = fleet.labels[i]
+  if(is.null(labels_i)) lab_f = i
+  else lab_f = labels_i[i]
 	# for (i in 1:n_fleets)
 	# {
 		acomp.obs <- dat$catch_paa[i,,]
@@ -3041,7 +3062,7 @@ plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
 }
 
 # Bubble plots of catch len comps (set is.catch.flag to False to plot Discard len comps)
-plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, fleet.labels)
+plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3053,8 +3074,8 @@ plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
   nyrs = length(years)
   n_lengths = mod$env$data$n_lengths
   n_fleets = dat$n_fleets
-  if(is.null(fleet.labels)) lab_f = i
-  else lab_f = fleet.labels[i]
+  if(is.null(labels_i)) lab_f = i
+  else lab_f = labels_i[i]
   
       lcomp.obs <- dat$catch_pal[i,,]
       catch.yrs <- which(dat$use_catch_pal[,i] == 1)
@@ -3089,7 +3110,7 @@ plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
 }
 
 # Bubble plots of catch CAAL (set is.catch.flag to False to plot Discard len comps)
-plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, fleet.labels)
+plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3102,8 +3123,8 @@ plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
   ages.lab = mod$ages.lab
   n_ages <- dat$n_ages
   n_fleets = dat$n_fleets
-  if(is.null(fleet.labels)) lab_f = i
-  else lab_f = fleet.labels[i]
+  if(is.null(labels_i)) lab_f = i
+  else lab_f = labels_i[i]
   # for (i in 1:n_fleets)
   # {
     for(y in seq_along(years)) {
@@ -3140,7 +3161,7 @@ plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
   # par(origpar)
 }
 #------------------------------------
-plot.index.input <- function(mod, plot.colors, index.labels)
+plot.index.input <- function(mod, plot.colors, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   par(mfrow=c(2,1), mar = c(1,1,1,1), oma = c(4,4,2,0))
@@ -3150,7 +3171,7 @@ plot.index.input <- function(mod, plot.colors, index.labels)
 	indvals <- dat$agg_indices
 	indvals[which(dat$use_indices!=1)] <- NA
 	n_indices = dat$n_indices
-	if(is.null(index.labels)) index.labels = 1:n_indices
+	if(is.null(labels_i)) labels_i = 1:n_indices
 	# rescale to mean 1 and stdev 1
 	rescaled <- indvals
 	my.mean <- apply(indvals,2,mean, na.rm=TRUE)
@@ -3166,7 +3187,7 @@ plot.index.input <- function(mod, plot.colors, index.labels)
 	box()
 	mtext(side = 2, "Rescaled Indices", outer = FALSE, line = 3)
 	for (i in 1:n_indices) lines(years,rescaled[,i],col=plot.colors[i])
-  legend("top", legend = paste0("Index " , index.labels), col = plot.colors, lty = 1, horiz = TRUE, xpd = NA, inset = c(0,-0.1), bty = "n")
+  legend("top", legend = paste0("Index " , labels_i), col = plot.colors, lty = 1, horiz = TRUE, xpd = NA, inset = c(0,-0.1), bty = "n")
 
 	# now repeat on log scale
 	log.indvals <- log(indvals)
@@ -3188,15 +3209,15 @@ plot.index.input <- function(mod, plot.colors, index.labels)
 #------------------------------------
 # Bubble plots of index age comps
 plot.index.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, 
-										do.tex = FALSE, fontfam="", od, index.labels)
+										do.tex = FALSE, fontfam="", od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
   nyrs = length(years)
   dat = mod$env$data
   n_indices = dat$n_indices
-  if(is.null(index.labels)) lab_i = i
-  else lab_i = index.labels[i]
+  if(is.null(labels_i)) lab_i = i
+  else lab_i = labels_i[i]
   
   if(missing(ages)) ages = 1:dat$n_ages
   if(missing(ages.lab)) ages.lab = mod$ages.lab
@@ -3241,7 +3262,7 @@ plot.index.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
 
 #------------------------------------
 # Bubble plots of index len comps
-plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, index.labels)
+plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
@@ -3253,8 +3274,8 @@ plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
   dat = mod$env$data
   n_indices = dat$n_indices
   n_lengths <- mod$env$data$n_lengths
-  if(is.null(index.labels)) lab_i = i
-  else lab_i = index.labels[i]
+  if(is.null(labels_i)) lab_i = i
+  else lab_i = labels_i[i]
 
   # for (i in 1:n_indices)
   # {
@@ -3293,7 +3314,7 @@ plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
 }
 
 # Bubble plots of index CAAL (set is.catch.flag to False to plot Discard len comps)
-plot.index.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, index.labels)
+plot.index.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, labels_i)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3306,8 +3327,8 @@ plot.index.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
   ages.lab = mod$ages.lab
   n_ages <- dat$n_ages
   n_indices = dat$n_indices
-  if(is.null(index.labels)) lab_i = i
-  else lab_i = index.labels[i]
+  if(is.null(labels_i)) lab_i = i
+  else lab_i = labels_i[i]
   # for (i in 1:n_fleets)
   # {
     for(y in seq_along(years)) {
@@ -3878,6 +3899,8 @@ plot.FXSPR.annual <- function(mod, alpha = 0.05, status.years, max.x, max.y, do.
     if(missing(max.y)) max.y <- max(sapply(rel.ssb.rel.F.ci.regs, function(x) max(x[,2],na.rm = TRUE)),1.5)
     if(is.infinite(max.y)) max.y <- 10
     if(is.infinite(max.x)) max.x <- 10
+	
+	## SPR Kobe:
     if(do.tex) cairo_pdf(file.path(od, paste0("Kobe_status.pdf")), family = fontfam, height = 10, width = 10)
     if(do.png) png(filename = file.path(od, paste0("Kobe_status.png")), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
     par(mfrow = c(1,1))
@@ -3903,6 +3926,7 @@ plot.FXSPR.annual <- function(mod, alpha = 0.05, status.years, max.x, max.y, do.
       polygon(rel.ssb.rel.F.ci.regs[[i]][,1], rel.ssb.rel.F.ci.regs[[i]][,2], lwd=status.lwd[i])#, border = gray(0.7))
     }    
     if(do.tex | do.png) dev.off() else par(origpar)
+	
     return(list(p.ssb.lo.f.lo = p.ssb.lo.f.lo, p.ssb.hi.f.lo = p.ssb.hi.f.lo, p.ssb.hi.f.hi = p.ssb.hi.f.hi, p.ssb.lo.f.hi = p.ssb.lo.f.hi))
   } else { return(NULL) }
 }  # end function
@@ -3959,8 +3983,15 @@ plot.MSY.annual <- function(mod, alpha = 0.05, max.x, max.y, do.tex = FALSE, do.
       # rm.rows <- which(ci[,2] < 0)
       ci[!is.finite(exp(ci))] = NA
       # ci[rm.rows,] = NA
-		  if(!na.ci) plot(years_full, exp(vals), xlab = 'Year', ylab = t.ylab, ylim = c(0,max(exp(ci),na.rm=TRUE)), type = 'l')
-      if(na.ci) plot(years_full, exp(vals), xlab = 'Year', ylab = t.ylab, ylim = c(0,max(exp(vals),na.rm=TRUE)), type = 'l')
+	  
+	  if(!na.ci) {
+	    y_lim = c(0, min(max(exp(ci), na.rm=TRUE), 3*exp(vals)[length(vals)], na.rm=TRUE) ) # relative last year
+		plot(years_full, exp(vals), xlab = 'Year', ylab = t.ylab, ylim = y_lim, type = 'l')
+	  }
+      if(na.ci) { 
+	    y_lim = c(0, min(max(exp(ci), na.rm=TRUE), 3*exp(vals)[length(vals)], na.rm=TRUE) ) # relative last year
+		plot(years_full, exp(vals), xlab = 'Year', ylab = t.ylab, ylim = y_lim, type = 'l')
+	  }
 		  grid(col = gray(0.7))
       not.na.ci <- !is.na(ci[,1])
 		  polygon(c(years_full[not.na.ci],rev(years_full[not.na.ci])), exp(c(ci[,1][not.na.ci],rev(ci[,2][not.na.ci]))), col = tcol, border = tcol, lwd = 1)
@@ -3984,10 +4015,17 @@ plot.MSY.annual <- function(mod, alpha = 0.05, max.x, max.y, do.tex = FALSE, do.
       # rm.rows <- which(ci[,2] < 0 | ci[,1] < 0)
       ci[!is.finite(ci)] = NA
       # ci[rm.rows,] = NA    
-    if(!na.ci) plot(years_full, rel.ssb.vals, xlab = 'Year', ylab = expression(paste("SSB/", SSB[MSY])), ylim = c(0,max(ci,na.rm=TRUE)), type = 'l')
-    if(na.ci) plot(years_full, rel.ssb.vals, xlab = 'Year', ylab = expression(paste("SSB/", SSB[MSY])), ylim = c(0,max(rel.ssb.vals,na.rm=TRUE)), type = 'l')
+    if(!na.ci) { 
+		y_lim = c(0, min(max(ci, na.rm=TRUE), 3*rel.ssb.vals[length(rel.ssb.vals)], na.rm=TRUE) ) # relative last year
+		plot(years_full, rel.ssb.vals, xlab = 'Year', ylab = expression(paste("SSB/", SSB[MSY])), ylim = y_lim, type = 'l')
+	}
+    if(na.ci) { 
+		y_lim = c(0, min(max(rel.ssb.vals, na.rm=TRUE), 3*rel.ssb.vals[length(rel.ssb.vals)], na.rm=TRUE) ) # relative last year
+		plot(years_full, rel.ssb.vals, xlab = 'Year', ylab = expression(paste("SSB/", SSB[MSY])), ylim = y_lim, type = 'l')
+	}
 	  grid(col = gray(0.7))
-	  polygon(c(years_full,rev(years_full)), exp(c(ci[,1],rev(ci[,2]))), col = tcol, border = "transparent", lwd = 1)
+	  not.na.ci <- !is.na(ci[,1])
+	  polygon(c(years_full[not.na.ci],rev(years_full[not.na.ci])), c(ci[,1][not.na.ci],rev(ci[,2][not.na.ci])), col = tcol, border = "transparent", lwd = 1)
 	  abline(h=1, lty = 2)
 	  abline(h=0.5, lty = 2, col = 'red')
     if(mod$env$data$do_proj==1) abline(v=tail(years,1), lty=2, lwd=1)
@@ -4003,12 +4041,19 @@ plot.MSY.annual <- function(mod, alpha = 0.05, max.x, max.y, do.tex = FALSE, do.
       # rm.rows <- which(ci[,2] < 0 | ci[,1] < 0)
       ci[!is.finite(ci)] = NA
       # ci[rm.rows,] = NA    
-    if(!na.ci) plot(years_full, rel.f.vals, xlab = 'Year', ylab = expression(paste(italic(F),"/", italic(F)[MSY])),
-      ylim = c(0,max(ci,na.rm=TRUE)), type = 'l')
-    if(na.ci) plot(years_full, rel.f.vals, xlab = 'Year', ylab = expression(paste(italic(F),"/", italic(F)[MSY])),
-      ylim = c(0,max(rel.f.vals,na.rm=TRUE)), type = 'l')
+    if(!na.ci) {
+		y_lim = c(0, min(max(ci, na.rm=TRUE), 3*rel.f.vals[length(rel.f.vals)], na.rm=TRUE) ) # relative last year
+		plot(years_full, rel.f.vals, xlab = 'Year', ylab = expression(paste(italic(F),"/", italic(F)[MSY])),
+        ylim = y_lim, type = 'l')
+	}
+    if(na.ci) {
+		y_lim = c(0, min(max(rel.f.vals, na.rm=TRUE), 3*rel.f.vals[length(rel.f.vals)], na.rm=TRUE) ) # relative last year
+		plot(years_full, rel.f.vals, xlab = 'Year', ylab = expression(paste(italic(F),"/", italic(F)[MSY])),
+        ylim = c(0,max(rel.f.vals,na.rm=TRUE)), type = 'l')
+	}
 	  grid(col = gray(0.7))
-	  polygon(c(years_full,rev(years_full)), c(ci[,1],rev(ci[,2])), col = tcol, border = tcol, lwd = 1)
+	  not.na.ci <- !is.na(ci[,1])
+	  polygon(c(years_full[not.na.ci],rev(years_full[not.na.ci])), c(ci[,1][not.na.ci],rev(ci[,2][not.na.ci])), col = tcol, border = tcol, lwd = 1)
 	  abline(h=1, lty = 2, col = 'red')
     if(mod$env$data$do_proj==1) abline(v=tail(years,1), lty=2, lwd=1)
     if(do.tex | do.png) dev.off() else par(origpar)
