@@ -330,18 +330,39 @@ Type get_YPR(Type log_F, vector<Type> M, matrix<Type> sel, matrix<Type> waacatch
   return YPR;
 }
 
-
+// Original WHAM way:
 template <class Type>
 Type get_SPR_0(vector<Type> M, vector<Type> mat, vector<Type> waassb, Type fracyearSSB)
 {
   int n_ages = M.size();
   Type SPR_0 = Type(0.0);
   Type ntemp0 = Type(1.0);
-  // WHAM way to calculate NAA:
   for (int a = 0; a < n_ages - 1; a++)
   {
     SPR_0 += ntemp0 * mat(a) * waassb(a) * exp(-fracyearSSB * M(a));
     ntemp0 *= exp(-M(a));
+  }
+  ntemp0 /= Type(1.0)-exp(-M(n_ages-1));
+  SPR_0 += ntemp0 * mat(n_ages-1) * waassb(n_ages-1) * exp(-fracyearSSB * M(n_ages-1));
+  return SPR_0;
+}
+
+// SS3 way:
+template <class Type>
+Type get_SPR_0_SS(vector<Type> M, vector<Type> mat, vector<Type> waassb, Type fracyearSSB)
+{
+  int n_ages = M.size();
+  Type SPR_0 = Type(0.0);
+  Type ntemp0 = Type(1.0);
+  int max_a_loop = n_ages + n_ages + n_ages - 1;
+  int a1 = 0;
+  for (int a = 0; a < max_a_loop; a++)
+  {
+	if(a > (n_ages-1)) {
+		a1 = n_ages - 1;
+	} else { a1 = a; }
+    SPR_0 += ntemp0 * mat(a1) * waassb(a1) * exp(-fracyearSSB * M(a1));
+    ntemp0 *= exp(-M(a1));
   }
   ntemp0 /= Type(1.0)-exp(-M(n_ages-1));
   SPR_0 += ntemp0 * mat(n_ages-1) * waassb(n_ages-1) * exp(-fracyearSSB * M(n_ages-1));
@@ -623,7 +644,7 @@ vector<Type> get_static_SPR_res(matrix<Type> MAA, array<Type> FAA, int which_F_a
   Type F_mult= 0;
   for(int f = 0; f < nf; f++) F_mult += sel(f,which_F_age-1);
   sel = sel/F_mult;
-  Type spr0 = get_SPR_0(M, mat, waa_s, ssbfrac); 
+  Type spr0 = get_SPR_0_SS(M, mat, waa_s, ssbfrac); 
 
   vector<Type> res(6+n), log_FXSPR_i(1), log_FXSPR_iter(n);
   log_FXSPR_iter(0) = res(6) = log(F_init);

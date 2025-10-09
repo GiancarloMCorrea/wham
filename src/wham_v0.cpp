@@ -1755,7 +1755,9 @@ Type objective_function<Type>::operator() ()
   // } else { // N1_model == 1
     // vector<Type> tmp_NAA(3*n_ages); // to save cum NAA
 	// int a1 = 0;
-	// for(int a = 0; a < (3*n_ages); a++) {
+	// Type cum_NAA = 0.0;
+	// int max_a_loop = n_ages + n_ages + n_ages;
+	// for(int a = 0; a < max_a_loop; a++) {
 	  // // calculate max age in loop for M and F:
 	  // if(a > (n_ages-1)) {
 		// a1 = n_ages - 1;
@@ -1763,13 +1765,12 @@ Type objective_function<Type>::operator() ()
       // if(a==0) tmp_NAA(0) = exp(log_N1_pars(0));
       // else
       // {
-        // if(a == (3*n_ages-1)) tmp_NAA(a) = tmp_NAA(a-1)/(1.0 + exp(-MAA(0,a1) - exp(log_N1_pars(1)) * FAA_tot(0,a1)/FAA_tot(0,which_F_age(0)-1)));
+        // if(a == (3*n_ages-1)) tmp_NAA(a) = tmp_NAA(a-1)/(1.0 - exp(-MAA(0,a1) - exp(log_N1_pars(1)) * FAA_tot(0,a1)/FAA_tot(0,which_F_age(0)-1)));
         // else tmp_NAA(a) = tmp_NAA(a-1)* exp(-MAA(0,a1) -  exp(log_N1_pars(1)) * FAA_tot(0,a1)/FAA_tot(0,which_F_age(0)-1));
       // }
 	// }
 	// // Calculate cum NAA:
-	// Type cum_NAA = 0.0;
-	// for(int a = (n_ages-1); a < (3*n_ages); a++) {
+	// for(int a = (n_ages-1); a < max_a_loop; a++) {
 		// cum_NAA += tmp_NAA(a);
 	// }
 	// // Fill NAA matrix:

@@ -30,8 +30,6 @@ retro <- function(model, n.peels = 7, ran = NULL, use.mle = TRUE, do.sdrep = FAL
   map <- model$input$map
   if(is.null(ran)) ran <- model$input$random
 
-  if(check.version) verify_version(model)
-
   temp <- model$input
   temp$random <- ran
   temp$data <- data
