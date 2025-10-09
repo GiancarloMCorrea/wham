@@ -2963,7 +2963,7 @@ plot.M <- function(mod, ages, ages.lab, alpha = 0.05, plot.colors)
 
 #------------------------------------
 #--------Data Plots------------------
-plot.catch.by.fleet <- function(mod, units = "mt", plot.colors)
+plot.catch.by.fleet <- function(mod, units = "mt", plot.colors, fleet.labels)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -2971,12 +2971,13 @@ plot.catch.by.fleet <- function(mod, units = "mt", plot.colors)
   nyrs = length(years)
   catch.obs <- dat$agg_catch
   n_fleets <- dat$n_fleets
+  if(is.null(fleet.labels)) fleet.labels = paste0('Fleet ', 1:n_fleets)
   if (n_fleets > 1) par(mfrow = c(2,1))
   else par(mfrow = c(1,1))
   if(missing(plot.colors)) plot.colors = mypalette(n_fleets)
 	barplot(t(catch.obs), xlab="Year", ylab= paste0("Catch (", units, ")"), ylim=c(0,1.1*max(apply(catch.obs,1,sum))), col=plot.colors,space=0)
 	axis(side=1, at = seq(2,nyrs,2)-0.5, labels = years[seq(2,nyrs,2)], cex=0.75)
-	legend('top', legend=paste0("Fleet ",1:n_fleets), horiz=TRUE, pch=15, col=plot.colors)
+	legend('top', legend=fleet.labels, horiz=TRUE, pch=15, col=plot.colors)
 	box(lwd = 2)
 	if (n_fleets > 1)
   {
@@ -2985,13 +2986,14 @@ plot.catch.by.fleet <- function(mod, units = "mt", plot.colors)
 	barplot(t(catch.prop), xlab="Year", ylab="Proportion of Catch", ylim=c(0,1.1), col=plot.colors, space=0)
     axis(side=1, las=2, at = seq(2,nyrs,2)-0.5, labels = years[seq(2,nyrs,2)], cex=0.75, las=2)
     box(lwd = 2)
-		legend('top', legend=paste0("Fleet ",1:n_fleets), horiz=TRUE, pch=15, col=plot.colors)
+		legend('top', legend=fleet.labels, horiz=TRUE, pch=15, col=plot.colors)
 	}
 	par(origpar)
 }
 
 # Bubble plots of catch age comps (set is.catch.flag to False to plot Discard age comps)
-plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od)
+plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, 
+										fontfam="", od, fleet.labels)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3001,6 +3003,8 @@ plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
   if(missing(ages.lab)) ages.lab = mod$ages.lab
   n_ages = length(ages)
   n_fleets = dat$n_fleets
+  if(is.null(fleet.labels)) lab_f = i
+  else lab_f = fleet.labels[i]
 	# for (i in 1:n_fleets)
 	# {
 		acomp.obs <- dat$catch_paa[i,,]
@@ -3010,7 +3014,7 @@ plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
 		{
 			scale.catch.obs <- 5
 			z3 <- as.matrix(acomp.obs) * scale.catch.obs
-      fname = paste0("catch_age_comp_fleet_",i)
+			fname = paste0("catch_age_comp_fleet_",i)
 
       if(do.tex) cairo_pdf(file.path(od, paste0(fname,".pdf")), family = fontfam, height = 10, width = 10)
       if(do.png) png(filename = file.path(od, paste0(fname,'.png')), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
@@ -3021,12 +3025,15 @@ plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
 			box()
 			abline(h=years, col="lightgray")
 			segments(x0=ages, y0=rep(years[1],n_ages), x1=ages, y1=rep(years[nyrs],n_ages), col = "lightgray", lty = 1)
-			for (j in 1:nyrs) points(ages, rep(years[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+			for (j in 1:nyrs) {
+				if(dat$use_catch_paa[j,i] == 1) points(ages, rep(years[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+				if(dat$use_catch_paa[j,i] == 0) points(ages, rep(years[j], n_ages), cex=z3[j,], col="black", bg = "#ffffff", pch = 21)
+			}
 
 			bubble.legend1 <- c(0.05,0.2,0.4)
 			bubble.legend2 <- bubble.legend1 * scale.catch.obs
 			legend("topright", xpd=TRUE, legend=bubble.legend1, pch=rep(21, 3), pt.cex=bubble.legend2, horiz=T , col='black', pt.bg = bubble.col)
-			title (paste0(my.title,i), outer=TRUE, line=-1)
+			title (paste0(my.title,lab_f), outer=TRUE, line=-1)
       if(do.tex | do.png) dev.off() else par(origpar)
 		} # end catch.yrs test
 	# }   #end loop n_fleets
@@ -3034,7 +3041,7 @@ plot.catch.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
 }
 
 # Bubble plots of catch len comps (set is.catch.flag to False to plot Discard len comps)
-plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od)
+plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, fleet.labels)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3046,7 +3053,9 @@ plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
   nyrs = length(years)
   n_lengths = mod$env$data$n_lengths
   n_fleets = dat$n_fleets
-
+  if(is.null(fleet.labels)) lab_f = i
+  else lab_f = fleet.labels[i]
+  
       lcomp.obs <- dat$catch_pal[i,,]
       catch.yrs <- which(dat$use_catch_pal[,i] == 1)
       my.title <- "Length Comps for Catch for Fleet "
@@ -3065,19 +3074,22 @@ plot.catch.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
         box()
         abline(h=years, col="lightgray")
         segments(x0=lengths, y0=rep(years[1],n_lengths), x1=lengths, y1=rep(years[nyrs],n_lengths), col = "lightgray", lty = 1)
-        for (j in 1:nyrs) points(lengths, rep(years[j], n_lengths), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+        for (j in 1:nyrs) {
+			if(dat$use_catch_pal[j,i] == 1) points(lengths, rep(years[j], n_lengths), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+			if(dat$use_catch_pal[j,i] == 0) points(lengths, rep(years[j], n_lengths), cex=z3[j,], col="black", bg = "#ffffff", pch = 21)
+		}
 
         bubble.legend1 <- c(0.05,0.15,0.25)
         bubble.legend2 <- bubble.legend1 * scale.catch.obs
         legend("topright", xpd=TRUE, legend=bubble.legend1, pch=rep(21, 3), pt.cex=bubble.legend2, horiz=T , col='black', pt.bg = bubble.col)
-        title (paste0(my.title,i), outer=TRUE, line=-1)
+        title (paste0(my.title,lab_f), outer=TRUE, line=-1)
         if(do.tex | do.png) dev.off() else par(origpar)
       } # end catch.yrs test
   #par(origpar)
 }
 
 # Bubble plots of catch CAAL (set is.catch.flag to False to plot Discard len comps)
-plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od)
+plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, fleet.labels)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3090,6 +3102,8 @@ plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
   ages.lab = mod$ages.lab
   n_ages <- dat$n_ages
   n_fleets = dat$n_fleets
+  if(is.null(fleet.labels)) lab_f = i
+  else lab_f = fleet.labels[i]
   # for (i in 1:n_fleets)
   # {
     for(y in seq_along(years)) {
@@ -3110,12 +3124,15 @@ plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
         box()
         abline(h=lengths, col="lightgray")
         segments(x0=ages, y0=rep(lengths[1],n_ages), x1=ages, y1=rep(lengths[n_lengths],n_ages), col = "lightgray", lty = 1)
-        for (j in 1:n_lengths) points(ages, rep(lengths[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+        for (j in 1:n_lengths) {
+			if(dat$use_catch_caal[y,i,j] == 1) points(ages, rep(lengths[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+			if(dat$use_catch_caal[y,i,j] == 0) points(ages, rep(lengths[j], n_ages), cex=z3[j,], col="black", bg = "#ffffff", pch = 21)
+		}
 
         bubble.legend1 <- c(0.5,1)
         bubble.legend2 <- bubble.legend1 * scale.catch.obs
         legend("topright", xpd=TRUE, legend=bubble.legend1, pch=rep(21, 3), pt.cex=bubble.legend2, horiz=T , col='black', pt.bg = bubble.col)
-        title (paste0(my.title,i, ' Year ', y), outer=TRUE, line=-1)
+        title (paste0(my.title,lab_f, ' Year ', y), outer=TRUE, line=-1)
         if(do.tex | do.png) dev.off() else par(origpar)
       } 
     }
@@ -3123,7 +3140,7 @@ plot.catch.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
   # par(origpar)
 }
 #------------------------------------
-plot.index.input <- function(mod, plot.colors)
+plot.index.input <- function(mod, plot.colors, index.labels)
 {
   origpar <- par(no.readonly = TRUE)
   par(mfrow=c(2,1), mar = c(1,1,1,1), oma = c(4,4,2,0))
@@ -3133,6 +3150,7 @@ plot.index.input <- function(mod, plot.colors)
 	indvals <- dat$agg_indices
 	indvals[which(dat$use_indices!=1)] <- NA
 	n_indices = dat$n_indices
+	if(is.null(index.labels)) index.labels = 1:n_indices
 	# rescale to mean 1 and stdev 1
 	rescaled <- indvals
 	my.mean <- apply(indvals,2,mean, na.rm=TRUE)
@@ -3148,7 +3166,7 @@ plot.index.input <- function(mod, plot.colors)
 	box()
 	mtext(side = 2, "Rescaled Indices", outer = FALSE, line = 3)
 	for (i in 1:n_indices) lines(years,rescaled[,i],col=plot.colors[i])
-  legend("top", legend = paste0("Index " , 1:n_indices), col = plot.colors, lty = 1, horiz = TRUE, xpd = NA, inset = c(0,-0.1), bty = "n")
+  legend("top", legend = paste0("Index " , index.labels), col = plot.colors, lty = 1, horiz = TRUE, xpd = NA, inset = c(0,-0.1), bty = "n")
 
 	# now repeat on log scale
 	log.indvals <- log(indvals)
@@ -3169,13 +3187,17 @@ plot.index.input <- function(mod, plot.colors)
 
 #------------------------------------
 # Bubble plots of index age comps
-plot.index.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od)
+plot.index.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, 
+										do.tex = FALSE, fontfam="", od, index.labels)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
   nyrs = length(years)
   dat = mod$env$data
   n_indices = dat$n_indices
+  if(is.null(index.labels)) lab_i = i
+  else lab_i = index.labels[i]
+  
   if(missing(ages)) ages = 1:dat$n_ages
   if(missing(ages.lab)) ages.lab = mod$ages.lab
 	n_ages <- length(ages)
@@ -3202,12 +3224,15 @@ plot.index.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
 			box()
 			abline(h=years, col="lightgray")
 			segments(x0=ages, y0=rep(years[1],n_ages), x1=ages, y1=rep(years[nyrs],n_ages), col = "lightgray", lty = 1)
-			for (j in 1:nyrs) points(ages, rep(years[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+			for (j in 1:nyrs) {
+				if(dat$use_index_paa[j,i] == 1) points(ages, rep(years[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+				if(dat$use_index_paa[j,i] == 0) points(ages, rep(years[j], n_ages), cex=z3[j,], col="black", bg = "#ffffff", pch = 21)
+			}
 
 			bubble.legend1 <- c(0.05,0.2,0.4)
 			bubble.legend2 <- bubble.legend1 * scale.index.obs
 			legend("topright", xpd=TRUE, legend=bubble.legend1, pch=rep(21, 3), pt.cex=bubble.legend2, horiz=TRUE, col='black', pt.bg = bubble.col)
-			title (paste0(my.title,i), outer=T, line=-1)
+			title (paste0(my.title,lab_i), outer=T, line=-1)
       if(do.tex | do.png) dev.off() else par(origpar)
 		} # end index.yrs test
 	# }   #end loop n_fleets
@@ -3216,7 +3241,7 @@ plot.index.age.comp.bubbles <- function(mod, ages, ages.lab, bubble.col = "#8c8c
 
 #------------------------------------
 # Bubble plots of index len comps
-plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od)
+plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, index.labels)
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
@@ -3228,6 +3253,8 @@ plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
   dat = mod$env$data
   n_indices = dat$n_indices
   n_lengths <- mod$env$data$n_lengths
+  if(is.null(index.labels)) lab_i = i
+  else lab_i = index.labels[i]
 
   # for (i in 1:n_indices)
   # {
@@ -3250,12 +3277,15 @@ plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
       box()
       abline(h=years, col="lightgray")
       segments(x0=lengths, y0=rep(years[1],n_lengths), x1=lengths, y1=rep(years[nyrs],n_lengths), col = "lightgray", lty = 1)
-      for (j in 1:nyrs) points(lengths, rep(years[j], n_lengths), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+      for (j in 1:nyrs) {
+		if(dat$use_index_pal[j,i] == 1) points(lengths, rep(years[j], n_lengths), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+		if(dat$use_index_pal[j,i] == 0) points(lengths, rep(years[j], n_lengths), cex=z3[j,], col="black", bg = "#ffffff", pch = 21)
+	  }
 
       bubble.legend1 <- c(0.05,0.15,0.25)
       bubble.legend2 <- bubble.legend1 * scale.index.obs
       legend("topright", xpd=TRUE, legend=bubble.legend1, pch=rep(21, 3), pt.cex=bubble.legend2, horiz=TRUE, col='black', pt.bg = bubble.col)
-      title (paste0(my.title,i), outer=T, line=-1)
+      title (paste0(my.title,lab_i), outer=T, line=-1)
       if(do.tex | do.png) dev.off() else par(origpar)
     } # end index.yrs test
   # }   #end loop n_fleets
@@ -3263,7 +3293,7 @@ plot.index.len.comp.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.p
 }
 
 # Bubble plots of index CAAL (set is.catch.flag to False to plot Discard len comps)
-plot.index.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od)
+plot.index.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png = FALSE, do.tex = FALSE, fontfam="", od, index.labels)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3276,6 +3306,8 @@ plot.index.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
   ages.lab = mod$ages.lab
   n_ages <- dat$n_ages
   n_indices = dat$n_indices
+  if(is.null(index.labels)) lab_i = i
+  else lab_i = index.labels[i]
   # for (i in 1:n_fleets)
   # {
     for(y in seq_along(years)) {
@@ -3295,12 +3327,15 @@ plot.index.caal.bubbles <- function(mod, bubble.col = "#8c8c8caa", i=1, do.png =
         box()
         abline(h=lengths, col="lightgray")
         segments(x0=ages, y0=rep(lengths[1],n_ages), x1=ages, y1=rep(lengths[n_lengths],n_ages), col = "lightgray", lty = 1)
-        for (j in 1:n_lengths) points(ages, rep(lengths[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+        for (j in 1:n_lengths) {
+			if(dat$use_index_caal[y,i,j] == 1) points(ages, rep(lengths[j], n_ages), cex=z3[j,], col="black", bg = bubble.col, pch = 21)
+			if(dat$use_index_caal[y,i,j] == 0) points(ages, rep(lengths[j], n_ages), cex=z3[j,], col="black", bg = "#ffffff", pch = 21)
+		}
 
         bubble.legend1 <- c(0.5,1)
         bubble.legend2 <- bubble.legend1 * scale.catch.obs
         legend("topright", xpd=TRUE, legend=bubble.legend1, pch=rep(21, 3), pt.cex=bubble.legend2, horiz=T , col='black', pt.bg = bubble.col)
-        title (paste0(my.title,i, ' Year ', years[y]), outer=TRUE, line=-1)
+        title (paste0(my.title,lab_i, ' Year ', years[y]), outer=TRUE, line=-1)
         if(do.tex | do.png) dev.off() else par(origpar)
       } 
     }
@@ -3396,11 +3431,12 @@ plot.pred.waa <- function(mod,type="ssb",plot.colors,ind=1)
 }  # end function
 
 #------------------------------------
-plot.maturity <- function(mod, ages.lab, plot.colors)
+plot.maturity <- function(mod, ages.lab, plot.colors, type = 'data')
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
-  mat = mod$rep$mat_at_age
+  if(type == 'data') mat = dat$mature
+  if(type == 'model') mat = mod$rep$mat_at_age
   years = mod$years
   n_years = length(years)
   ages = 1:dat$n_ages

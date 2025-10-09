@@ -35,7 +35,8 @@
 #' mod <- fit_wham(input4_SNEMAYT)
 #' plot_wham_output(mod)
 #' }
-plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72, plot.opts = NULL){
+plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72, plot.opts = NULL,
+							 fleet.labels = NULL, index.labels=NULL){
   # if sdreport succeeded but didn't save full sdreport object in mod, recalculate it here
   if(mod$is_sdrep & class(mod$sdrep)[1] != "sdreport"){
     mod$sdrep <- TMB::sdreport(mod)
@@ -80,24 +81,24 @@ plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72
   if(out.type == 'pdf'){
     # PDF input_data -----------------
     grDevices::cairo_pdf(filename=file.path(dir.main,"input_data.pdf"), family = fontfam, height = 10, width = 10, onefile = TRUE)
-    plot.catch.by.fleet(mod)
+    plot.catch.by.fleet(mod, fleet.labels=fleet.labels)
     for(i in 1:mod$env$data$n_fleets) { 
-      plot.catch.age.comp.bubbles(mod, i=i)
-      plot.catch.len.comp.bubbles(mod, i=i)
-      plot.catch.caal.bubbles(mod, i=i)
+      plot.catch.age.comp.bubbles(mod, i=i, fleet.labels=fleet.labels)
+      plot.catch.len.comp.bubbles(mod, i=i, fleet.labels=fleet.labels)
+      plot.catch.caal.bubbles(mod, i=i, fleet.labels=fleet.labels)
     }
-    plot.index.input(mod)
+    plot.index.input(mod, index.labels=index.labels)
     for(i in 1:mod$env$data$n_indices) {
-      plot.index.age.comp.bubbles(mod, i=i)
-      plot.index.len.comp.bubbles(mod, i=i)
-      plot.index.caal.bubbles(mod, i=i)
+      plot.index.age.comp.bubbles(mod, i=i, index.labels=index.labels)
+      plot.index.len.comp.bubbles(mod, i=i, index.labels=index.labels)
+      plot.index.caal.bubbles(mod, i=i, index.labels=index.labels)
     }
     plot.waa(mod,"ssb")
     plot.waa(mod,"jan1")
     plot.waa(mod,"totcatch")
     for(i in 1:mod$env$data$n_fleets) plot.waa(mod,"fleets", ind=i)
     for(i in 1:mod$env$data$n_indices) plot.waa(mod,"indices", ind=i)
-    plot.maturity(mod)
+    plot.maturity(mod, type = 'data')
     dev.off()
 
     # PDF diagnostics -----------------
@@ -166,6 +167,7 @@ plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72
     plot.tile.age.year(mod, type="MAA")
     plot.tile.age.year(mod, type="LAA")
     plot.tile.age.year(mod, type="phi_mat")
+	plot.maturity(mod, type = 'model')
     condQ = as.list(mod$sdrep, "Std. Error")$logit_q
     plot_q_prior_post(mod) #flag inside to plot if prior is being used. 
     plot_q(mod)
@@ -217,21 +219,21 @@ plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72
     dir.data <- file.path(dir.plots, "input_data")
     dir.create(dir.data, showWarnings = FALSE)
     png(file.path(dir.data,"catch_by_fleet.png"),width=10,height=10,units="in",res=res,family=fontfam)
-    plot.catch.by.fleet(mod)
+    plot.catch.by.fleet(mod, fleet.labels=fleet.labels)
     dev.off()
     for(i in 1:mod$env$data$n_fleets){
-      plot.catch.age.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data)
-      plot.catch.len.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data)
-      plot.catch.caal.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data)
+      plot.catch.age.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data, fleet.labels=fleet.labels)
+      plot.catch.len.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data, fleet.labels=fleet.labels)
+      plot.catch.caal.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data, fleet.labels=fleet.labels)
     }    
 
     png(file.path(dir.data,"index.png"),width=10,height=10,units="in",res=res,family=fontfam)
-    plot.index.input(mod)
+    plot.index.input(mod, index.labels=index.labels)
     dev.off()
     for(i in 1:mod$env$data$n_indices){
-      plot.index.age.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data)
-      plot.index.len.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data)
-      plot.index.caal.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data)
+      plot.index.age.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data, index.labels=index.labels)
+      plot.index.len.comp.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data, index.labels=index.labels)
+      plot.index.caal.bubbles(mod, do.png = TRUE, fontfam=fontfam, i=i, od=dir.data, index.labels=index.labels)
     }
 
     png(file.path(dir.data,"weight_at_age_SSB.png"),width=10,height=10,units="in",res=res,family=fontfam)
@@ -269,8 +271,8 @@ plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72
         }
       }
     
-    png(file.path(dir.data,"maturity.png"),width=10,height=10,units="in",res=res,family=fontfam)
-    plot.maturity(mod)
+    png(file.path(dir.data,"maturity_data.png"),width=10,height=10,units="in",res=res,family=fontfam)
+    plot.maturity(mod, type = 'data')
     dev.off()
 
     # PNG diagnostics -----------------
@@ -393,6 +395,9 @@ plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72
     plot.tile.age.year(mod, type="MAA", do.png=TRUE, fontfam=fontfam, res = res, od=dir.res)
     plot.tile.age.year(mod, type="LAA", do.png=TRUE, fontfam=fontfam, res = res, od=dir.res)
     plot.tile.age.year(mod, type="phi_mat", do.png=TRUE, fontfam=fontfam, res = res, od=dir.res)
+	png(file.path(dir.data,"maturity_model.png"),width=10,height=10,units="in",res=res,family=fontfam)
+    plot.maturity(mod, type = 'model')
+    dev.off()
     condQ = as.list(mod$sdrep, "Std. Error")$logit_q
     plot_q_prior_post(mod, do.png=TRUE, fontfam=fontfam, od=dir.res) #flag inside to plot if prior is being used. 
     plot_q(mod, do.png=TRUE, fontfam=fontfam, od=dir.res)
