@@ -103,7 +103,7 @@ project_wham = function(model, proj.opts=list(n.yrs=3, use.last.F=TRUE, use.avg.
                                               cont.LAA.re=NULL, cont.mat.re=NULL, cont.WAA.re=NULL, 
                                               avg.rec.yrs=NULL, percentFXSPR=100,
                                               percentFMSY=100, proj_F_opt = NULL, proj_Fcatch = NULL),
-                        n.newton=3, do.sdrep=TRUE, MakeADFun.silent=FALSE, save.sdrep=TRUE)
+                        n.newton=3, do.sdrep=TRUE, MakeADFun.silent=FALSE, save.sdrep=TRUE, TMB.bias.correct=FALSE, TMB.jointPrecision = FALSE)
 {
   # modify wham input (fix parameters at previously estimated values, pad with NAs)
   tryCatch(input2 <- prepare_projection(model, proj.opts)
