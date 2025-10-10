@@ -293,8 +293,9 @@ Type objective_function<Type>::operator() ()
   // array<Type> QAA(n_years_model+n_years_proj,n_indices,n_ages);
   vector<array<Type> > phi_matrix(waa.dim(0)); // save phi matrix at different fracyr. Each array = y,l,a
   vector<matrix<Type> > selAL(n_selblocks); // Could be either selex-at-age or selex-at-len
-  vector<matrix<Type> > selAA(n_selblocks); // selAA(b)(y,a) gives selectivity by block, year, age; selAA(b) is matrix with dim = n_years x n_ages;
+  vector<matrix<Type> > selAA(n_selblocks); // Only selex-at-age. Put 1 for all ages when main selex is selex-at-len
   vector<matrix<Type> > selLL(n_selblocks); // Only selex-at-len. Put 1 for all length bins when main selex is selex-at-age
+  array<Type> tf_selAA(n_years_model+n_years_proj,n_fleets,n_ages); // Always selex-at-age, used for F calculations
   matrix<Type> q(n_years_model+n_years_proj,n_indices);
   vector<Type> t_paa(n_ages); 
   vector<Type> t_pred_paa(n_ages); 
@@ -1697,7 +1698,8 @@ Type objective_function<Type>::operator() ()
 	  temp_selAA = get_selAA_from_selAL(this_selAL, 0, this_sel_model, catch_phi_mat); // Original: should use catch_phi_mat
     for(int a = 0; a < n_ages; a++)
     {
-      FAA(0,f,a) = F(0,f) * temp_selAA(a);
+      tf_selAA(0,f,a) = temp_selAA(a); // save transformed selex-at-age
+	  FAA(0,f,a) = F(0,f) * temp_selAA(a);
       log_FAA(0,f,a) = log(FAA(0,f,a));
       FAA_tot(0,a) = FAA_tot(0,a) + FAA(0,f,a);
     }
@@ -1711,13 +1713,14 @@ Type objective_function<Type>::operator() ()
 	  temp_selAA = get_selAA_from_selAL(this_selAL, y, this_sel_model, catch_phi_mat); // Original: should use catch_phi_mat
       for(int a = 0; a < n_ages; a++)
       {
+		tf_selAA(y,f,a) = temp_selAA(a); // save transformed selex-at-age
         FAA(y,f,a) = F(y,f) * temp_selAA(a);
         log_FAA(y,f,a) = log(FAA(y,f,a));
         FAA_tot(y,a) = FAA_tot(y,a) + FAA(y,f,a);
       }
     }
   }
-  // REPORT(temp_selAA);
+  REPORT(tf_selAA);
   // Total mortality, Z = F + M (non-projection years only)
   for(int y = 0; y < n_years_model; y++) ZAA.row(y) = FAA_tot.row(y) + MAA.row(y);
 
@@ -2592,7 +2595,7 @@ Type objective_function<Type>::operator() ()
   //If stock-recruit models
   if(recruit_model > 2) //Beverton-Holt or Ricker selected
   {
-    int n = 10;
+    int n = 10; // original: 10
     vector<Type> log_FMSY(n_years_model + n_years_proj), log_FMSY_i(1);
     matrix<Type> log_FMSY_iter(n_years_model + n_years_proj,n);
 	matrix<Type> selmat(n_fleets,n_ages);
@@ -2605,8 +2608,11 @@ Type objective_function<Type>::operator() ()
       for(int a = 0; a < n_ages; a++)
       {
         M(a) = MAA(y,a);
+		// WHAM way to calculate selmat:
 		for(int f = 0; f< n_fleets; f++) selmat(f,a) = FAA(y,f,a)/FAA_tot(y,which_F_age(y)-1); //have to look at FAA_tot to see where max F is.
-        waassb(a) = pred_waa(waa_pointer_ssb-1,y,a);
+        // SS way to calculate selmat: use sel-at-age by fishery
+		// for(int f = 0; f< n_fleets; f++) selmat(f,a) = tf_selAA(y,f,a);
+		waassb(a) = pred_waa(waa_pointer_ssb-1,y,a);
 		for(int f = 0; f< n_fleets; f++) waacatch_MSY(f,a) = pred_waa(waa_pointer_totcatch-1, y, a);
         mat(a) = mat_at_age(y,a);
       }

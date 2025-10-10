@@ -195,10 +195,11 @@ check_which_F_age <- function(mod)
   }
   mod$fn(mle)
   mod$rep <- mod$report(mod$env$last.par.best)
-  for(y in 1:dim(mod$rep$FAA)[2]){
-    temp <- apply(rbind(mod$rep$FAA[,y,]),2,sum)
-    mod$env$data$which_F_age[y] <- mod$input$data$which_F_age[y] <- which(temp == max(temp))[1]
-  }
+  #for(y in 1:dim(mod$rep$FAA)[2]){
+  #  temp <- apply(rbind(mod$rep$FAA[,y,]),2,sum)
+  #  mod$env$data$which_F_age[y] <- mod$input$data$which_F_age[y] <- which(temp == max(temp))[1]
+  #}
+  mod$env$data$which_F_age[] <- mod$input$data$which_F_age[] <- apply(mod$rep$FAA_tot,1, function(x) which(x == max(x))[1])
   #if(mod$env$data$do_SPR_BRPs == 1){
   #  temp <- apply(mod$rep$FAA_static,2,sum)
   #  mod$env$data$which_F_age_static <- mod$input$data$which_F_age_static <- as.numeric(which(temp == max(temp))[1])
@@ -208,6 +209,7 @@ check_which_F_age <- function(mod)
   mod$rep <- mod$report(mod$env$last.par.best)
   return(mod)
 }
+
 
 # do_sdreport <- function(model, save.sdrep = TRUE) {
 #   model$sdrep <- try(TMB::sdreport(model))
