@@ -3773,6 +3773,7 @@ plot.FXSPR.annual <- function(mod, alpha = 0.05, status.years, max.x, max.y, do.
   tcol <- col2rgb('black')
   tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
   std <- summary(mod$sdrep, "report")
+  # For XSPR ref points:
 	inds <- list(Y.t = which(rownames(std) == "log_Y_FXSPR"))
 	inds$F.t <- which(rownames(std) == "log_FXSPR")
 	inds$SSB.t <- which(rownames(std) == "log_SSB_FXSPR")
@@ -3931,7 +3932,7 @@ plot.FXSPR.annual <- function(mod, alpha = 0.05, status.years, max.x, max.y, do.
   } else { return(NULL) }
 }  # end function
 
-plot.MSY.annual <- function(mod, alpha = 0.05, max.x, max.y, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, od)
+plot.MSY.annual <- function(mod, status.years, alpha = 0.05, max.x, max.y, do.tex = FALSE, do.png = FALSE, fontfam="", res = 72, od)
 {
   origpar <- par(no.readonly = TRUE)
   dat = mod$env$data
@@ -3942,21 +3943,32 @@ plot.MSY.annual <- function(mod, alpha = 0.05, max.x, max.y, do.tex = FALSE, do.
   n_years_full = length(years_full)
   std = summary(mod$sdrep, "report")
   cov <- mod$sdrep$cov
+  if(missing(status.years)){
+    status.years = n_years
+    status.lwd = 1
+    if(mod$env$data$do_proj==1){
+      status.years <- c(status.years, n_years_full)
+      status.lwd <- c(2,1)
+    }
+  } else {
+    status.lwd <- rep(1, length(status.years))
+  }
+  
 	if(dat$recruit_model == 3) #Beverton-Holt assumed in model fit
 	{ # test to make sure steepness was estimated
     tcol <- col2rgb('black')
     tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
-		inds <- list(MSY = which(rownames(std) == "log_MSY"))
-		inds$FMSY <- which(rownames(std) == "log_FMSY")
-		inds$SSBMSY <- which(rownames(std) == "log_SSB_MSY")
-		inds$RMSY <- which(rownames(std) == "log_R_MSY")
-		inds$ssb <- which(rownames(std) == "log_SSB")
+	inds <- list(MSY = which(rownames(std) == "log_MSY"))
+	inds$FMSY <- which(rownames(std) == "log_FMSY")
+	inds$SSBMSY <- which(rownames(std) == "log_SSB_MSY")
+	inds$RMSY <- which(rownames(std) == "log_R_MSY")
+	inds$ssb <- which(rownames(std) == "log_SSB")
   	inds$faa <- which(rownames(std) == "log_FAA_tot")
-	  log.faa <- matrix(std[inds$faa,1], n_years_full, n_ages)
-	  age.full.f <- apply(log.faa,1, function(x) max(which(x == max(x))))
-	  inds$full.f <- (age.full.f-1)*n_years_full + 1:n_years_full  + min(inds$faa) - 1 #cbind(1:n_years, age.full.f)
-	  ylabs <- c(expression(MSY),expression(italic(F)[MSY]), expression(SSB[MSY]), expression(italic(R)[MSY]))
-	  log.rel.ssb.rel.F.cov <- lapply(1:n_years_full, function(x)
+	 log.faa <- matrix(std[inds$faa,1], n_years_full, n_ages)
+	 age.full.f <- apply(log.faa,1, function(x) max(which(x == max(x))))
+	 inds$full.f <- (age.full.f-1)*n_years_full + 1:n_years_full  + min(inds$faa) - 1 #cbind(1:n_years, age.full.f)
+	 ylabs <- c(expression(MSY),expression(italic(F)[MSY]), expression(SSB[MSY]), expression(italic(R)[MSY]))
+	 log.rel.ssb.rel.F.cov <- lapply(1:n_years_full, function(x)
 	  {
 	    K <- cbind(c(1,-1,0,0),c(0,0,1,-1))
 	    ind <- c(inds$ssb[x],inds$SSBMSY[x],inds$full.f[x],inds$FMSY[x])
@@ -4057,6 +4069,59 @@ plot.MSY.annual <- function(mod, alpha = 0.05, max.x, max.y, do.tex = FALSE, do.
 	  abline(h=1, lty = 2, col = 'red')
     if(mod$env$data$do_proj==1) abline(v=tail(years,1), lty=2, lwd=1)
     if(do.tex | do.png) dev.off() else par(origpar)
+	
+		# MSY Kobe -------------------------
+		log.rel.ssb.vals <- std[inds$ssb,1][1:n_years_full] - std[inds$SSBMSY,1][1:n_years_full]
+		log.rel.f.vals <- std[inds$full.f,1][1:n_years_full] - std[inds$FMSY,1][1:n_years_full]
+
+	    rel.ssb.rel.F.ci.regs <- lapply(status.years, function(x){
+		  if(is.na(log.rel.f.vals[x]) | any(diag(log.rel.ssb.rel.F.cov[[x]])<0)) return(matrix(NA,100,2))
+		  else return(exp(ellipse::ellipse(log.rel.ssb.rel.F.cov[[x]], centre = c(log.rel.ssb.vals[x],log.rel.f.vals[x]), level = 1-alpha)))
+		  })
+		p.ssb.lo.f.lo <- p.ssb.lo.f.hi <- p.ssb.hi.f.lo <- p.ssb.hi.f.hi <- rep(NA,length(status.years))
+		for(i in 1:length(status.years)){
+		  check.zero.sd <- diag(log.rel.ssb.rel.F.cov[[status.years[i]]])==0 | diag(log.rel.ssb.rel.F.cov[[status.years[i]]]) < 0
+		  if(!any(is.na(check.zero.sd))) if(!any(check.zero.sd)){
+			p.ssb.lo.f.lo[i] <- mnormt::sadmvn(lower = c(-Inf,-Inf), upper = c(0, 0), mean = c(log.rel.ssb.vals[status.years[i]],log.rel.f.vals[status.years[i]]), varcov = log.rel.ssb.rel.F.cov[[status.years[i]]])
+			p.ssb.lo.f.hi[i] <- mnormt::sadmvn(lower = c(-Inf,0), upper = c(0, Inf), mean = c(log.rel.ssb.vals[status.years[i]],log.rel.f.vals[status.years[i]]), varcov = log.rel.ssb.rel.F.cov[[status.years[i]]])
+			p.ssb.hi.f.lo[i] <- mnormt::sadmvn(lower = c(0,-Inf), upper = c(Inf, 0), mean = c(log.rel.ssb.vals[status.years[i]],log.rel.f.vals[status.years[i]]), varcov = log.rel.ssb.rel.F.cov[[status.years[i]]])
+			p.ssb.hi.f.hi[i] <- mnormt::sadmvn(lower = c(0,0), upper = c(Inf, Inf), mean = c(log.rel.ssb.vals[status.years[i]],log.rel.f.vals[status.years[i]]), varcov = log.rel.ssb.rel.F.cov[[status.years[i]]])
+		  }
+		}
+
+	    vals <- exp(cbind(log.rel.ssb.vals, log.rel.f.vals))
+		if(missing(max.x)) max.x <- max(sapply(rel.ssb.rel.F.ci.regs, function(x) max(x[,1],na.rm = TRUE)),1.5)
+		if(missing(max.y)) max.y <- max(sapply(rel.ssb.rel.F.ci.regs, function(x) max(x[,2],na.rm = TRUE)),1.5)
+		if(is.infinite(max.y)) max.y <- 10
+		if(is.infinite(max.x)) max.x <- 10
+	
+		if(do.tex) cairo_pdf(file.path(od, paste0("Kobe_status_MSY.pdf")), family = fontfam, height = 10, width = 10)
+		if(do.png) png(filename = file.path(od, paste0("Kobe_status_MSY.png")), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
+		par(mfrow = c(1,1))
+		plot(vals[status.years,1],vals[status.years,2], ylim = c(0,max.y), xlim = c(0,max.x), 
+		xlab = bquote(paste("SSB/", SSB[paste("MSY")])),
+		  ylab = bquote(paste(italic(F),"/", italic(F)[paste("MSY")])),type = 'n')
+		lims = par("usr")
+		tcol <- col2rgb('red')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(lims[1],1,1,lims[1]),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
+		tcol <- col2rgb('green')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(1,lims[2],lims[2],1),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
+		tcol <- col2rgb('yellow')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(lims[1],1,1,lims[1]),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
+		polygon(c(1,lims[2],lims[2],1),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
+		legend("topleft", legend = paste0("Prob = ", round(p.ssb.lo.f.hi,2)), bty = "n", text.font=status.lwd)
+		legend("topright", legend = paste0("Prob = ", round(p.ssb.hi.f.hi,2)), bty = "n", text.font=status.lwd)
+		legend("bottomleft", legend = paste0("Prob = ", round(p.ssb.lo.f.lo,2)), bty = "n", text.font=status.lwd)
+		legend("bottomright", legend = paste0("Prob = ", round(p.ssb.hi.f.lo,2)), bty = "n", text.font=status.lwd)
+		text(vals[status.years,1],vals[status.years,2], substr(years_full[status.years],3,4), font=status.lwd)
+		for(i in 1:length(status.years)) if(all(!is.infinite(rel.ssb.rel.F.ci.regs[[i]]))) { 
+		  polygon(rel.ssb.rel.F.ci.regs[[i]][,1], rel.ssb.rel.F.ci.regs[[i]][,2], lwd=status.lwd[i])#, border = gray(0.7))
+		}    
+		if(do.tex | do.png) dev.off() else par(origpar)	
+	
 	}
 }  # end function
 

@@ -294,9 +294,9 @@ plot.timeseries.compare <- function(df, x, plot.opts){
                 legend.position="top", legend.box.margin = ggplot2::margin(0,0,0,0), legend.margin = ggplot2::margin(0,0,0,0))
   # if not relative, force y min to 0
   if(is.null(plot.opts$relative.to)){
-    g <- g + ggplot2::scale_y_continuous(expand=c(0.01,0.01), limits = c(0,NA), labels=fancy_scientific)
+    g <- g + ggplot2::scale_y_continuous(expand=c(0.01,0.01), limits = c(0,NA))# , labels=fancy_scientific)
   } else {
-    g <- g + ggplot2::scale_y_continuous(expand=c(0.01,0.01), labels=fancy_scientific)
+    g <- g + ggplot2::scale_y_continuous(expand=c(0.01,0.01))# , labels=fancy_scientific)
   }
   # if projections, add vline at terminal year
   last_proj <- sapply(x, function(x) tail(x$years_full,1))
@@ -608,57 +608,116 @@ plot.tile.compare <- function(x, plot.opts, type="selAA"){
   return(g)
 }
 plot.kobe.compare <- function(x, plot.opts){
-  status.years.ind <- sapply(x, function(x) which(x$years_full == plot.opts$kobe.yr))
-  do.kobe <- unlist(sapply(mapply(function(x,i) x$log_rel_ssb_F_cov[i], x, status.years.ind), function(y) !all(!is.finite(y)))) # only if some non-infinite values for at least some status years
-  if(any(do.kobe)){
-    fxn <- function(y,i) y[["log_F"]][i,1]-y[["log_FXSPR"]][i,1]
-    rel.f.vals <- mapply(fxn, x, status.years.ind)
-    fxn <- function(y,i) y[["log_SSB"]][i,1]-y[["log_SSB_FXSPR"]][i,1]
-    rel.ssb.vals <- mapply(fxn, x, status.years.ind)
-    log.rel.ssb.rel.F.cov <- mapply(function(x,i) x$log_rel_ssb_F_cov[i], x, status.years.ind)
-    log.rel.ssb.rel.F.ci.regs <- lapply(1:length(x), function(x){
-      if(is.na(rel.f.vals[x]) | any(diag(log.rel.ssb.rel.F.cov[[x]])<0)) return(matrix(NA,100,2))
-      else return(exp(ellipse::ellipse(log.rel.ssb.rel.F.cov[[x]], centre = c(rel.ssb.vals[x],rel.f.vals[x]), level = 1-plot.opts$alpha)))
-      })
-    p.ssb.lo.f.lo <- p.ssb.lo.f.hi <- p.ssb.hi.f.lo <- p.ssb.hi.f.hi <- rep(NA,length(status.years.ind))
-    for(i in 1:length(status.years.ind)){
-      check.zero.sd <- diag(log.rel.ssb.rel.F.cov[[i]])==0 | diag(log.rel.ssb.rel.F.cov[[i]]) < 0
-      if(!any(is.na(check.zero.sd))) if(!any(check.zero.sd)){
-        p.ssb.lo.f.lo[i] <- mnormt::sadmvn(lower = c(-Inf,-Inf), upper = c(-log(2), 0), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
-        p.ssb.lo.f.hi[i] <- mnormt::sadmvn(lower = c(-Inf,0), upper = c(-log(2), Inf), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
-        p.ssb.hi.f.lo[i] <- mnormt::sadmvn(lower = c(-log(2),-Inf), upper = c(Inf, 0), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
-        p.ssb.hi.f.hi[i] <- mnormt::sadmvn(lower = c(-log(2),0), upper = c(Inf, Inf), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
-      }
-    }
+  if(plot.opts$refpt == 'XSPR') {
+	  status.years.ind <- sapply(x, function(x) which(x$years_full == plot.opts$kobe.yr))
+	  do.kobe <- unlist(sapply(mapply(function(x,i) x$log_rel_ssb_F_cov[i], x, status.years.ind), function(y) !all(!is.finite(y)))) # only if some non-infinite values for at least some status years
+	  if(any(do.kobe)){
+		fxn <- function(y,i) y[["log_F"]][i,1]-y[["log_FXSPR"]][i,1]
+		rel.f.vals <- mapply(fxn, x, status.years.ind)
+		fxn <- function(y,i) y[["log_SSB"]][i,1]-y[["log_SSB_FXSPR"]][i,1]
+		rel.ssb.vals <- mapply(fxn, x, status.years.ind)
+		log.rel.ssb.rel.F.cov <- mapply(function(x,i) x$log_rel_ssb_F_cov[i], x, status.years.ind)
+		log.rel.ssb.rel.F.ci.regs <- lapply(1:length(x), function(x){
+		  if(is.na(rel.f.vals[x]) | any(diag(log.rel.ssb.rel.F.cov[[x]])<0)) return(matrix(NA,100,2))
+		  else return(exp(ellipse::ellipse(log.rel.ssb.rel.F.cov[[x]], centre = c(rel.ssb.vals[x],rel.f.vals[x]), level = 1-plot.opts$alpha)))
+		  })
+		p.ssb.lo.f.lo <- p.ssb.lo.f.hi <- p.ssb.hi.f.lo <- p.ssb.hi.f.hi <- rep(NA,length(status.years.ind))
+		for(i in 1:length(status.years.ind)){
+		  check.zero.sd <- diag(log.rel.ssb.rel.F.cov[[i]])==0 | diag(log.rel.ssb.rel.F.cov[[i]]) < 0
+		  if(!any(is.na(check.zero.sd))) if(!any(check.zero.sd)){
+			p.ssb.lo.f.lo[i] <- mnormt::sadmvn(lower = c(-Inf,-Inf), upper = c(-log(2), 0), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+			p.ssb.lo.f.hi[i] <- mnormt::sadmvn(lower = c(-Inf,0), upper = c(-log(2), Inf), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+			p.ssb.hi.f.lo[i] <- mnormt::sadmvn(lower = c(-log(2),-Inf), upper = c(Inf, 0), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+			p.ssb.hi.f.hi[i] <- mnormt::sadmvn(lower = c(-log(2),0), upper = c(Inf, Inf), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+		  }
+		}
 
-    vals <- exp(cbind(rel.ssb.vals, rel.f.vals))
-    max.x <- max(sapply(log.rel.ssb.rel.F.ci.regs, function(x) max(x[,1],na.rm = TRUE)),1.25, vals[,1])
-    max.y <- max(sapply(log.rel.ssb.rel.F.ci.regs, function(x) max(x[,2],na.rm = TRUE)),1.25, vals[,2])
+		vals <- exp(cbind(rel.ssb.vals, rel.f.vals))
+		max.x <- max(sapply(log.rel.ssb.rel.F.ci.regs, function(x) max(x[,1],na.rm = TRUE)),1.25, vals[,1])
+		max.y <- max(sapply(log.rel.ssb.rel.F.ci.regs, function(x) max(x[,2],na.rm = TRUE)),1.25, vals[,2])
 
-    plot(vals[,1],vals[,2], ylim = c(0,1.05*max.y), xlim = c(0,1.05*max.x), xlab = bquote(paste("SSB / ", SSB[paste(.(x[[1]]$percentSPR),"%")])),
-      ylab = bquote(paste(italic(F)," / ", italic(F)[paste(.(x[[1]]$percentSPR),"%")])),type = 'n')
-    lims = par("usr")
-    tcol <- col2rgb('red')
-    tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
-    polygon(c(lims[1],0.5,0.5,lims[1]),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
-    tcol <- col2rgb('green')
-    tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
-    polygon(c(0.5,lims[2],lims[2],0.5),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
-    tcol <- col2rgb('yellow')
-    tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
-    polygon(c(lims[1],0.5,0.5,lims[1]),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
-    polygon(c(0.5,lims[2],lims[2],0.5),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
-    if(plot.opts$kobe.prob){
-      legend("topleft", legend = paste0("Prob = ", round(p.ssb.lo.f.hi,2)), bty = "n", cex=0.7)
-      legend("topright", legend = paste0("Prob = ", round(p.ssb.hi.f.hi,2)), bty = "n", cex=0.7)
-      legend("bottomleft", legend = paste0("Prob = ", round(p.ssb.lo.f.lo,2)), bty = "n", cex=0.7)
-      legend("bottomright", legend = paste0("Prob = ", round(p.ssb.hi.f.lo,2)), bty = "n", cex=0.7)
-    }
-    text(vals[,1],vals[,2], paste0(rownames(vals)," (",plot.opts$kobe.yr,")"), cex=0.7)
-    for(i in 1:length(status.years.ind)) polygon(log.rel.ssb.rel.F.ci.regs[[i]][,1], log.rel.ssb.rel.F.ci.regs[[i]][,2], lty=i)#, border = gray(0.7))
-    return(list(rel.status = vals, p.ssb.lo.f.lo = p.ssb.lo.f.lo, p.ssb.hi.f.lo = p.ssb.hi.f.lo, p.ssb.hi.f.hi = p.ssb.hi.f.hi, p.ssb.lo.f.hi = p.ssb.lo.f.hi))
-  } else return(NULL)
+		plot(vals[,1],vals[,2], ylim = c(0,1.05*max.y), xlim = c(0,1.05*max.x), xlab = bquote(paste("SSB / ", SSB[paste(.(x[[1]]$percentSPR),"%")])),
+		  ylab = bquote(paste(italic(F)," / ", italic(F)[paste(.(x[[1]]$percentSPR),"%")])),type = 'n')
+		lims = par("usr")
+		tcol <- col2rgb('red')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(lims[1],0.5,0.5,lims[1]),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
+		tcol <- col2rgb('green')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(0.5,lims[2],lims[2],0.5),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
+		tcol <- col2rgb('yellow')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(lims[1],0.5,0.5,lims[1]),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
+		polygon(c(0.5,lims[2],lims[2],0.5),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
+		if(plot.opts$kobe.prob){
+		  legend("topleft", legend = paste0("Prob = ", round(p.ssb.lo.f.hi,2)), bty = "n", cex=0.7)
+		  legend("topright", legend = paste0("Prob = ", round(p.ssb.hi.f.hi,2)), bty = "n", cex=0.7)
+		  legend("bottomleft", legend = paste0("Prob = ", round(p.ssb.lo.f.lo,2)), bty = "n", cex=0.7)
+		  legend("bottomright", legend = paste0("Prob = ", round(p.ssb.hi.f.lo,2)), bty = "n", cex=0.7)
+		}
+		text(vals[,1],vals[,2], paste0(rownames(vals)," (",plot.opts$kobe.yr,")"), cex=0.7)
+		for(i in 1:length(status.years.ind)) polygon(log.rel.ssb.rel.F.ci.regs[[i]][,1], log.rel.ssb.rel.F.ci.regs[[i]][,2], lty=i)#, border = gray(0.7))
+		return(list(rel.status = vals, p.ssb.lo.f.lo = p.ssb.lo.f.lo, p.ssb.hi.f.lo = p.ssb.hi.f.lo, p.ssb.hi.f.hi = p.ssb.hi.f.hi, p.ssb.lo.f.hi = p.ssb.lo.f.hi))
+	  } else return(NULL)
+  }
+  
+  # MSY Kobe -------------------------------
+  if(plot.opts$refpt == 'MSY') {
+	  status.years.ind <- sapply(x, function(x) which(x$years_full == plot.opts$kobe.yr))
+	  do.kobe <- unlist(sapply(mapply(function(x,i) x$log_rel_ssb_F_cov_msy[i], x, status.years.ind), function(y) !all(!is.finite(y)))) # only if some non-infinite values for at least some status years
+	  if(any(do.kobe)){
+		fxn <- function(y,i) y[["log_F"]][i,1]-y[["log_FMSY"]][i,1]
+		rel.f.vals <- mapply(fxn, x, status.years.ind)
+		fxn <- function(y,i) y[["log_SSB"]][i,1]-y[["log_SSB_MSY"]][i,1]
+		rel.ssb.vals <- mapply(fxn, x, status.years.ind)
+		log.rel.ssb.rel.F.cov <- mapply(function(x,i) x$log_rel_ssb_F_cov_msy[i], x, status.years.ind)
+		log.rel.ssb.rel.F.ci.regs <- lapply(1:length(x), function(x){
+		  if(is.na(rel.f.vals[x]) | any(diag(log.rel.ssb.rel.F.cov[[x]])<0)) return(matrix(NA,100,2))
+		  else return(exp(ellipse::ellipse(log.rel.ssb.rel.F.cov[[x]], centre = c(rel.ssb.vals[x],rel.f.vals[x]), level = 1-plot.opts$alpha)))
+		  })
+		p.ssb.lo.f.lo <- p.ssb.lo.f.hi <- p.ssb.hi.f.lo <- p.ssb.hi.f.hi <- rep(NA,length(status.years.ind))
+		for(i in 1:length(status.years.ind)){
+		  check.zero.sd <- diag(log.rel.ssb.rel.F.cov[[i]])==0 | diag(log.rel.ssb.rel.F.cov[[i]]) < 0
+		  if(!any(is.na(check.zero.sd))) if(!any(check.zero.sd)){
+			p.ssb.lo.f.lo[i] <- mnormt::sadmvn(lower = c(-Inf,-Inf), upper = c(0, 0), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+			p.ssb.lo.f.hi[i] <- mnormt::sadmvn(lower = c(-Inf,0), upper = c(0, Inf), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+			p.ssb.hi.f.lo[i] <- mnormt::sadmvn(lower = c(0,-Inf), upper = c(Inf, 0), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+			p.ssb.hi.f.hi[i] <- mnormt::sadmvn(lower = c(0,0), upper = c(Inf, Inf), mean = c(rel.ssb.vals[i],rel.f.vals[i]), varcov = log.rel.ssb.rel.F.cov[[i]])
+		  }
+		}
+
+		vals <- exp(cbind(rel.ssb.vals, rel.f.vals))
+		max.x <- max(sapply(log.rel.ssb.rel.F.ci.regs, function(x) max(x[,1],na.rm = TRUE)),1.25, vals[,1])
+		max.y <- max(sapply(log.rel.ssb.rel.F.ci.regs, function(x) max(x[,2],na.rm = TRUE)),1.25, vals[,2])
+
+		plot(vals[,1],vals[,2], ylim = c(0,1.05*max.y), xlim = c(0,1.05*max.x), 
+			xlab = bquote(paste("SSB / ", SSB[paste("MSY")])),
+		  ylab = bquote(paste(italic(F)," / ", italic(F)[paste("MSY")])),type = 'n')
+		lims = par("usr")
+		tcol <- col2rgb('red')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(lims[1],1,1,lims[1]),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
+		tcol <- col2rgb('green')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(1,lims[2],lims[2],1),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
+		tcol <- col2rgb('yellow')
+		tcol <- paste(rgb(tcol[1,],tcol[2,], tcol[3,], maxColorValue = 255), "55", sep = '')
+		polygon(c(lims[1],1,1,lims[1]),c(lims[3],lims[3],1,1), border = tcol, col = tcol)
+		polygon(c(1,lims[2],lims[2],1),c(1,1,lims[4],lims[4]), border = tcol, col = tcol)
+		if(plot.opts$kobe.prob){
+		  legend("topleft", legend = paste0("Prob = ", round(p.ssb.lo.f.hi,2)), bty = "n", cex=0.7)
+		  legend("topright", legend = paste0("Prob = ", round(p.ssb.hi.f.hi,2)), bty = "n", cex=0.7)
+		  legend("bottomleft", legend = paste0("Prob = ", round(p.ssb.lo.f.lo,2)), bty = "n", cex=0.7)
+		  legend("bottomright", legend = paste0("Prob = ", round(p.ssb.hi.f.lo,2)), bty = "n", cex=0.7)
+		}
+		text(vals[,1],vals[,2], paste0(rownames(vals)," (",plot.opts$kobe.yr,")"), cex=0.7)
+		for(i in 1:length(status.years.ind)) polygon(log.rel.ssb.rel.F.ci.regs[[i]][,1], log.rel.ssb.rel.F.ci.regs[[i]][,2], lty=i)#, border = gray(0.7))
+		return(list(rel.status = vals, p.ssb.lo.f.lo = p.ssb.lo.f.lo, p.ssb.hi.f.lo = p.ssb.hi.f.lo, p.ssb.hi.f.hi = p.ssb.hi.f.hi, p.ssb.lo.f.hi = p.ssb.lo.f.hi))
+	  } else return(NULL) 
+  }
+  
 }
+
 plot.M.compare <- function(x, plot.opts){
   plot.opts$ci <- rep(FALSE, length(x))
   df <- data.frame(matrix(NA, nrow=0, ncol=6))
