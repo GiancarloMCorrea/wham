@@ -291,7 +291,7 @@ plot.timeseries.compare <- function(df, x, plot.opts){
           ggplot2::scale_colour_viridis_d() +
           ggplot2::theme_bw() +
           ggplot2::theme(strip.background = ggplot2::element_blank(), strip.placement = "outside",
-                legend.position="top", legend.box.margin = ggplot2::margin(0,0,0,0), legend.margin = ggplot2::margin(0,0,0,0))
+                legend.position="right", legend.box.margin = ggplot2::margin(0,0,0,0), legend.margin = ggplot2::margin(0,0,0,0))
   # if not relative, force y min to 0
   if(is.null(plot.opts$relative.to)){
     g <- g + ggplot2::scale_y_continuous(expand=c(0.01,0.01), limits = c(0,NA))# , labels=fancy_scientific)
@@ -780,7 +780,7 @@ plot.selectivity.compare <- function(x, plot.opts, type="fleet"){
           ggplot2::scale_x_continuous(expand=c(0.01,0.01), breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) +
           ggplot2::scale_colour_viridis_d() +
           ggplot2::theme_bw() +
-          ggplot2::theme(legend.position="top", legend.box.margin = ggplot2::margin(0,0,0,0), legend.margin = ggplot2::margin(0,0,0,0))
+          ggplot2::theme(legend.position="right", legend.box.margin = ggplot2::margin(0,0,0,0), legend.margin = ggplot2::margin(0,0,0,0))
   return(g)
 }
 

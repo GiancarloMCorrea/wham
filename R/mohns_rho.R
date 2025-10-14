@@ -23,9 +23,10 @@ mohns_rho = function(model)
   {
     rho = c(
       mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$SSB[ny-x]/model$rep$SSB[ny-x] - 1)),
-      mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$Fbar[ny-x]/model$rep$Fbar[ny-x] - 1)))#,
+      mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$Fbar[ny-x]/model$rep$Fbar[ny-x] - 1)),
+	  mean(sapply(1:npeels, function(x) (model$peels[[x]]$rep$SSB[ny-x]/exp(model$peels[[x]]$rep$log_SSB_MSY[ny-x]))/(model$rep$SSB[ny-x]/exp(model$rep$log_SSB_MSY[ny-x])) - 1)) )#,
     #mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$NAA[ny-x,1]/model$rep$NAA[ny-x,1] - 1)))
-    names(rho) = c("SSB","Fbar")#,"R")
+    names(rho) = c("SSB","Fbar","SSB_MSY")#,"R")
     rho.naa = sapply(1:na, function(y)
     {
       mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$NAA[ny-x,y]/model$rep$NAA[ny-x,y] - 1))

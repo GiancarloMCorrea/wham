@@ -191,6 +191,7 @@ plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72
     if(!is.null(mod$peels)){
       grDevices::cairo_pdf(filename=file.path(dir.main, "retro.pdf"), family = fontfam, height = 10, width = 10, onefile = TRUE)
       plot.retro(mod, what = "SSB")
+	  plot.retro(mod, what = "SSB_MSY")
       plot.retro(mod, what = "Fbar")
       plot.retro(mod, what = "NAA")
       plot.retro(mod, what = "NAA_age", age=1)
@@ -424,6 +425,7 @@ plot_wham_output <- function(mod, dir.main = getwd(), out.type = 'png', res = 72
       dir.retro <- file.path(dir.plots, "retro")
       dir.create(dir.retro, showWarnings = FALSE)
       plot.retro(mod, what = "SSB", od=dir.retro, do.png=TRUE, fontfam=fontfam)
+	  plot.retro(mod, what = "SSB_MSY", od=dir.retro, do.png=TRUE, fontfam=fontfam)
       plot.retro(mod, what = "Fbar", od=dir.retro, do.png=TRUE, fontfam=fontfam)
       plot.retro(mod, what = "NAA", od=dir.retro, do.png=TRUE, fontfam=fontfam)
       plot.retro(mod, what = "NAA_age", age=1, od=dir.retro, do.png=TRUE, fontfam=fontfam)

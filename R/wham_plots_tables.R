@@ -4300,7 +4300,7 @@ plot.retro <- function(mod,y.lab,y.range1,y.range2, alpha = 0.05, what = "SSB", 
 {
   origpar <- par(no.readonly = TRUE)
   years = mod$years
-	n_years <- length(years) # don't use projections
+  n_years <- length(years) # don't use projections
   npeels = length(mod$peels)
   if(npeels)
   {
@@ -4317,13 +4317,18 @@ plot.retro <- function(mod,y.lab,y.range1,y.range2, alpha = 0.05, what = "SSB", 
     if(do.png) png(filename = file.path(od, paste0(what.print,"_retro.png")), width = 10*144, height = 10*144, res = 144, pointsize = 12, family = fontfam)
     plot.colors = mypalette(npeels+1)
     tcol = col2rgb(plot.colors)
-    tcol = rgb(tcol[1,],tcol[2,],tcol[3,], maxColorValue = 255, alpha = 200)
+    tcol = rgb(tcol[1,],tcol[2,],tcol[3,], maxColorValue = 255)
     if(what == "NAA_age"){
       res = list(head(mod$rep[["NAA"]],n_years))
       res[2:(npeels+1)] = lapply(mod$peels, function(x) x$rep[["NAA"]])
     } else {
-      res = list(head(mod$rep[[what]],n_years))
-      res[2:(npeels+1)] = lapply(mod$peels, function(x) x$rep[[what]])
+	  if(what == 'SSB_MSY') {
+		res = list(head(mod$rep[['SSB']],n_years)/head(exp(mod$rep[['log_SSB_MSY']]),n_years))
+		res[2:(npeels+1)] = lapply(mod$peels, function(x) x$rep[['SSB']]/exp(x$rep[['log_SSB_MSY']]))
+	  } else {
+		res = list(head(mod$rep[[what]],n_years))
+		res[2:(npeels+1)] = lapply(mod$peels, function(x) x$rep[[what]])
+	  }
     }
     if(what == "NAA")
     {
@@ -4356,9 +4361,21 @@ plot.retro <- function(mod,y.lab,y.range1,y.range2, alpha = 0.05, what = "SSB", 
     }
     if(what %in% c("SSB","Fbar"))
     {
-      if(missing(y.range1)) y.range1 <- range(sapply(res, function(x) range(x)))
+      if(missing(y.range1)) y.range1 <- c(0, max(sapply(res, function(x) max(x))))
       par(mfrow = c(1,1))
       plot(years,res[[1]],lwd=1,col=plot.colors[1],type='l',xlab="Year",ylab=what,ylim=y.range1)
+      grid(col = gray(0.7), lty = 2)
+      for (i in 1:npeels)
+      {
+        lines(years[1:(n_years-i)],res[[i+1]], col = tcol[i+1])
+        points(years[n_years-i],res[[i+1]][n_years-i],pch=16,col=plot.colors[i+1])
+      }
+    }
+    if(what %in% c("SSB_MSY"))
+    {
+      if(missing(y.range1)) y.range1 <- c(0, max(sapply(res, function(x) max(x))))
+      par(mfrow = c(1,1))
+      plot(years,res[[1]],lwd=1,col=plot.colors[1],type='l',xlab="Year",ylab=expression(paste("SSB/", SSB["MSY"])),ylim=y.range1)
       grid(col = gray(0.7), lty = 2)
       for (i in 1:npeels)
       {
@@ -4374,6 +4391,7 @@ plot.retro <- function(mod,y.lab,y.range1,y.range2, alpha = 0.05, what = "SSB", 
     if(missing(y.lab)) y.lab = bquote(paste("Mohn's ", rho, "(",.(what),")"))
     if(what %in% c("NAA","NAA_age")) rel.res = lapply(1:length(res), function(x) res[[x]]/res[[1]][1:(n_years - x + 1),] - 1)
     if(what %in% c("SSB","Fbar")) rel.res = lapply(1:length(res), function(x) res[[x]]/res[[1]][1:(n_years - x + 1)] - 1)
+	if(what %in% c("SSB_MSY")) rel.res = lapply(1:length(res), function(x) res[[x]]/res[[1]][1:(n_years - x + 1)] - 1)
     rho.vals = mohns_rho(mod)
 
     if(what == "NAA")
@@ -4411,7 +4429,7 @@ plot.retro <- function(mod,y.lab,y.range1,y.range2, alpha = 0.05, what = "SSB", 
       rho.plot <- round(rho.vals[rho.nm],3)
       legend("bottomleft", legend = bquote(rho == .(rho.plot)), bty = "n")
     }
-    if(what %in% c("SSB","Fbar"))
+    if(what %in% c("SSB","Fbar","SSB_MSY"))
     {
       if(missing(y.range2)) y.range2 <- c(-1,max(sapply(rel.res, function(x) range(x))))
       par(mfrow = c(1,1))
@@ -5025,7 +5043,8 @@ plot.tile.age.year <- function(mod, type="selAA", do.tex = FALSE, do.png = FALSE
   # selAA for all blocks using facet_wrap
   if(type=="selex"){ 
     n_selblocks <- dat$n_selblocks
-    sel_mod <- c("age-specific","logistic","double-logistic","decreasing-logistic", "double-normal","len-logistic","len-decreasing-logistic","len-double-normal")[dat$selblock_models]
+    sel_mod <- c("age-specific","logistic","double-logistic","decreasing-logistic", "double-normal","splines",
+				 "len-logistic","len-decreasing-logistic","len-double-normal","len-splines")[dat$selblock_models]
     sel_re <- c("no","IID","AR1","AR1_y","2D AR1")[dat$selblock_models_re]
     save_df = NULL
     for(i in 1:n_selblocks) {
