@@ -744,8 +744,8 @@ plot.ll.table.fn <- function(mod,plot.colors){
   obs.dists[paste0("Fleet ", 1:n_fleets, " Length Comp")] = paste0("x ~ ", acm[mod$env$data$len_comp_model_fleets])
   obs.dists[paste0("Index ", 1:n_indices, " Length Comp")] = paste0("x ~ ", acm[mod$env$data$len_comp_model_indices])
 
-  proc.lls = lls[names(lls) %in% c("nll_M", "nll_NAA", "nll_GW", "nll_LW", "nll_LAA", "nll_recruit", "lprior_b")]
-  names(proc.lls) = c("M", "NAA", "growth", "length-weight", "mean LAA", "recruit", "W_b_M")[match(names(proc.lls),c("nll_M", "nll_NAA", "nll_GW", "nll_LW", "nll_LAA", "nll_recruit", "lprior_b"))]
+  proc.lls = lls[names(lls) %in% c("nll_M", "nll_NAA", "nll_WAA", "nll_LAA", "nll_recruit", "lprior_b")]
+  names(proc.lls) = c("M", "NAA", "WAA", "LAA", "recruit", "W_b_M")[match(names(proc.lls),c("nll_M", "nll_NAA", "nll_WAA", "nll_LAA", "nll_recruit", "lprior_b"))]
   proc.lls = unlist(lapply(proc.lls, sum))
   n.proc.ll = length(proc.lls)
   proc.dists = rep("log(x) ~ Gaussian", n.proc.ll)

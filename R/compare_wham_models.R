@@ -134,9 +134,9 @@ Returning AIC/rho table for WHAM models only.
       }
       rho <- t(sapply(wham.mods, function(x){
         mohns_rho(x)
-      }))[ ,c("R","SSB","Fbar")]
+      }))
       rho <- round(rho, 4)
-      colnames(rho) <- paste0("rho_",c("R","SSB","Fbar"))
+      colnames(rho) <- paste0("rho_",colnames(rho))
       # apply(rho, 1, function(y) mean(abs(y)))
     }
     tab <- cbind(aic.tab, rho)
